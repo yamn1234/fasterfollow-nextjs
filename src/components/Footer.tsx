@@ -25,7 +25,7 @@ const Footer = () => {
 
   const enabledSocialLinks = footerSettings.social_links.filter(link => link.enabled);
 
-  const footerDescription = isArabic 
+  const footerDescription = isArabic
     ? footerSettings.description
     : 'The best social media services store in the Arab world. We provide high-quality services at competitive prices.';
 
@@ -97,7 +97,7 @@ const Footer = () => {
           {footerSettings.show_payment_logos && (
             <div className="flex items-center gap-4">
               <img
-                src="https://upload.wikimedia.org/wikipedia/commons/5/5e/Visa_Inc._logo.svg"
+                src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/visa.svg"
                 alt="Visa"
                 width="74"
                 height="24"
@@ -105,7 +105,7 @@ const Footer = () => {
                 className="h-6 w-auto opacity-60 hover:opacity-100 transition-opacity"
               />
               <img
-                src="https://upload.wikimedia.org/wikipedia/commons/2/2a/Mastercard-logo.svg"
+                src="https://cdn.jsdelivr.net/gh/simple-icons/simple-icons/icons/mastercard.svg"
                 alt="Mastercard"
                 width="38"
                 height="24"

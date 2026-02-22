@@ -2,25 +2,12 @@ import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ShoppingCart, Zap, Shield, Headphones } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 import heroImage from "@/assets/hero-rocket.png";
 import { useTranslation } from "@/hooks/useTranslation";
 
-// Preload LCP image dynamically for better performance
-const preloadImage = (url: string) => {
-  if (!url) return;
-  
-  // Check if preload link already exists
-  const existingLink = document.querySelector(`link[href="${url}"]`);
-  if (existingLink) return;
-  
-  const link = document.createElement('link');
-  link.rel = 'preload';
-  link.as = 'image';
-  link.href = url;
-  link.fetchPriority = 'high';
-  document.head.appendChild(link);
-};
+// Next.js <Image priority /> handles preloading natively.
 
 interface HeroStats {
   customers: string;
@@ -54,14 +41,14 @@ interface HeroSectionProps {
 
 const HeroSection = ({ settings, siteSettings }: HeroSectionProps) => {
   const { t, isArabic } = useTranslation();
-  
-  const title = isArabic 
+
+  const title = isArabic
     ? (siteSettings?.site_name_ar || 'متجر المتابعين')
     : (siteSettings?.site_name || 'FasterFollow');
-  const description = isArabic 
+  const description = isArabic
     ? (siteSettings?.site_description || 'نقدم لك أسهل وأبسط وأسرع خدمة لزيادة المتابعين والتفاعل على منصات التواصل الاجتماعي.')
     : 'We provide you with the easiest and fastest service to increase followers and engagement on social media platforms.';
-  const buttonText = isArabic 
+  const buttonText = isArabic
     ? (settings?.button_text || 'تصفح الخدمات')
     : 'Browse Services';
   const buttonLink = settings?.button_link || '/services';
@@ -69,14 +56,9 @@ const HeroSection = ({ settings, siteSettings }: HeroSectionProps) => {
   const customImage = settings?.image_url;
   const imageToShow = customImage || heroImage;
 
-  // Preload LCP image as soon as we know the URL
-  useEffect(() => {
-    if (imageToShow) {
-      preloadImage(imageToShow);
-    }
-  }, [imageToShow]);
+  // Preloading is handled by <Image priority /> now.
 
-  const platformText = isArabic 
+  const platformText = isArabic
     ? 'تيك توك، إنستجرام، فيسبوك، تويتر، يوتيوب'
     : 'TikTok, Instagram, Facebook, Twitter, YouTube';
 
@@ -96,7 +78,7 @@ const HeroSection = ({ settings, siteSettings }: HeroSectionProps) => {
               {t('welcomeTo')}{" "}
               <span className="text-gradient">{title}</span>
             </h1>
-            
+
             <p className="text-base sm:text-lg md:text-xl text-muted-foreground mb-8 leading-relaxed animate-slide-up" style={{ animationDelay: "0.1s" }}>
               {description}{" "}
               <strong className="text-foreground">{platformText}</strong>
@@ -141,14 +123,14 @@ const HeroSection = ({ settings, siteSettings }: HeroSectionProps) => {
 
           {/* Image */}
           <div className="order-1 lg:order-2 flex justify-center">
-            <img
+            <Image
               src={imageToShow}
               alt={`${title} - ${isArabic ? 'زيادة متابعين السوشيال ميديا' : 'Social Media Growth'}`}
               width={512}
               height={512}
-              className="w-full max-w-xs sm:max-w-md lg:max-w-lg animate-float drop-shadow-2xl"
-              fetchPriority="high"
-              decoding="async"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              className="w-full max-w-xs sm:max-w-md lg:max-w-lg object-contain animate-float drop-shadow-2xl"
+              priority
             />
           </div>
         </div>
