@@ -358,10 +358,12 @@ const Auth = () => {
 
   const handleGoogleSignIn = async () => {
     try {
+      // Use explicit HTTPS production URL to ensure redirect works reliably
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fasterfollow.site';
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `${siteUrl}/dashboard`,
         },
       });
       if (error) {

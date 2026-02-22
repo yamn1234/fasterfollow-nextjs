@@ -67,7 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
-        
+
         // Defer profile fetch with setTimeout to prevent deadlock
         if (session?.user) {
           setTimeout(() => {
@@ -83,7 +83,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
-      
+
       if (session?.user) {
         fetchProfile(session.user.id).then((data) => {
           setProfile(data);
@@ -98,8 +98,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const signUp = async (email: string, password: string, fullName: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://fasterfollow.site';
+    const redirectUrl = `${siteUrl}/`;
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
@@ -110,7 +111,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
       },
     });
-    
+
     return { error: error as Error | null };
   };
 
@@ -119,7 +120,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       email,
       password,
     });
-    
+
     if (error) {
       return { error: error as Error | null };
     }
@@ -141,7 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: suspensionError };
       }
     }
-    
+
     return { error: null };
   };
 
