@@ -246,7 +246,7 @@ const BalanceTab = () => {
     setProcessingPayment(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke('fawaterk-create-payment', {
+      const { data, error } = await supabase.functions.invoke('fawaterak-create-payment', {
         body: {
           amount: numericAmount,
           userId: user.id,
@@ -256,8 +256,8 @@ const BalanceTab = () => {
 
       if (error) throw error;
 
-      if (data?.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
+      if (data?.paymentUrl) {
+        window.location.href = data.paymentUrl;
         return;
       } else {
         throw new Error("لم يتم الحصول على رابط الدفع");
@@ -424,8 +424,8 @@ const BalanceTab = () => {
                       key={gateway.id}
                       htmlFor={gateway.id}
                       className={`flex items-center gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all ${paymentMethod === gateway.id
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-primary/30"
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/30"
                         }`}
                     >
                       <RadioGroupItem value={gateway.id} id={gateway.id} />

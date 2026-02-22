@@ -1,157 +1,174 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { encode as hexEncode } from "https://deno.land/std@0.168.0/encoding/hex.ts";
 
 const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const FAWATERAK_API_URL = "https://app.fawaterk.com/api/v2";
+
+async function generateHash(data: string, key: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const keyData = encoder.encode(key);
+  const cryptoKey = await crypto.subtle.importKey(
+    "raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+  );
+  const signature = await crypto.subtle.sign("HMAC", cryptoKey, encoder.encode(data));
+  return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
 serve(async (req) => {
-    // Handle CORS preflight requests
-    if (req.method === "OPTIONS") {
-        return new Response(null, { headers: corsHeaders });
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const apiKey = Deno.env.get("FAWATERAK_API_KEY");
+    const providerKey = Deno.env.get("FAWATERAK_PROVIDER_KEY");
+    if (!apiKey) {
+      throw new Error("Fawaterak API key not configured");
     }
 
+    const { amount, userId } = await req.json();
+
+    if (!amount || amount <= 0) {
+      return new Response(
+        JSON.stringify({ error: "Invalid amount" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (!userId) {
+      return new Response(
+        JSON.stringify({ error: "User ID required" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`Creating Fawaterak payment for user ${userId}, amount: $${amount}`);
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    const { data: authUser } = await supabase.auth.admin.getUserById(userId);
+    const customerEmail = authUser?.user?.email || "customer@example.com";
+    const customerName = authUser?.user?.user_metadata?.full_name || "Customer";
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("balance")
+      .eq("user_id", userId)
+      .single();
+
+    const currentBalance = profile?.balance || 0;
+
+    const webhookUrl = `${supabaseUrl}/functions/v1/fawaterak-webhook`;
+
+    const requestBody: Record<string, unknown> = {
+      payment_method_id: 2,
+      cartTotal: amount.toFixed(2),
+      currency: "USD",
+      customer: {
+        first_name: customerName.split(" ")[0] || "Customer",
+        last_name: customerName.split(" ").slice(1).join(" ") || "User",
+        email: customerEmail,
+        phone: "0500000000",
+        address: "Digital Product",
+      },
+      redirectionUrls: {
+        successUrl: `${webhookUrl}?status=success&userId=${userId}`,
+        failUrl: `${webhookUrl}?status=fail&userId=${userId}`,
+        pendingUrl: `${webhookUrl}?status=pending&userId=${userId}`,
+      },
+      cartItems: [
+        {
+          name: "Account Balance Top-up",
+          price: amount.toFixed(2),
+          quantity: "1",
+        },
+      ],
+    };
+
+    const headers: Record<string, string> = {
+      "Authorization": `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    };
+
+    // Add hash if provider key is available
+    if (providerKey) {
+      const hash = await generateHash(JSON.stringify(requestBody), providerKey);
+      headers["Hash"] = hash;
+      console.log("Hash key generated and included in request");
+    }
+
+    const paymentRes = await fetch(`${FAWATERAK_API_URL}/invoiceInitPay`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(requestBody),
+    });
+
+    const responseText = await paymentRes.text();
+    console.log("Fawaterak raw response:", responseText);
+
+    let paymentData;
     try {
-        const { amount, userId, currency = "USD" } = await req.json();
-
-        console.log("Creating Fawaterk payment:", { amount, userId, currency });
-
-        const token = Deno.env.get("FAWATERK_API_KEY");
-        const supabaseUrl = Deno.env.get("SUPABASE_URL");
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-
-        if (!token) {
-            console.error("Fawaterk API credentials not configured");
-            throw new Error("Fawaterk API credentials not configured");
-        }
-
-        if (!supabaseUrl || !supabaseServiceKey) {
-            throw new Error("Supabase configuration missing");
-        }
-
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
-
-        // Fetch user details for the invoice
-        const { data: profile, error: profileError } = await supabase
-            .from("profiles")
-            .select("full_name")
-            .eq("user_id", userId)
-            .single();
-
-        if (profileError) {
-            console.error("Error fetching user profile:", profileError);
-            throw new Error("User not found");
-        }
-
-        // Get user email from auth
-        const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(userId);
-        const userEmail = user?.email || "customer@fasterfollow.site";
-        const userName = profile?.full_name || "Customer";
-
-        // Generate a unique order ID
-        const orderId = `${userId}-${Date.now()}`;
-
-        // Get the return URL from the request origin or use a default
-        const origin = req.headers.get("origin") || "https://fasterfollow.site";
-        const successUrl = `${origin}/dashboard?tab=balance&payment=success&gateway=fawaterk`;
-        const errorUrl = `${origin}/dashboard?tab=balance&payment=cancelled&gateway=fawaterk`;
-
-        console.log("Creating invoice with Fawaterk API...");
-
-        const bodyData = {
-            payment_method_id: 2, // 2 is typically the ID for Visa/Mastercard in Fawaterk, adjust if needed
-            cartTotal: parseFloat(amount),
-            currency: currency,
-            customer: {
-                first_name: userName.split(' ')[0] || "Customer",
-                last_name: userName.split(' ').slice(1).join(' ') || "Name",
-                email: userEmail,
-                phone: "01000000000" // Required by Fawaterk, using a placeholder if none exists
-            },
-            redirectionUrls: {
-                successUrl: successUrl,
-                failUrl: errorUrl,
-                pendingUrl: errorUrl
-            },
-            cartItems: [
-                {
-                    name: `Deposit ${amount} ${currency}`,
-                    price: parseFloat(amount),
-                    quantity: 1
-                }
-            ]
-        };
-
-        // Create invoice with Fawaterk API v2
-        const response = await fetch("https://app.fawaterk.com/api/v2/invoiceInitPay", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(bodyData),
-        });
-
-        const responseText = await response.text();
-        console.log("Fawaterk API response status:", response.status);
-        console.log("Fawaterk API response:", responseText);
-
-        if (!response.ok) {
-            throw new Error(`Fawaterk API error: ${response.status} - ${responseText}`);
-        }
-
-        const result = JSON.parse(responseText);
-
-        if (result.status !== "success" || !result.data?.payment_data?.redirectTo) {
-            console.error("Invalid Fawaterk response:", result);
-            throw new Error("Fawaterk API returned success but missing redirect URL");
-        }
-
-        const checkoutUrl = result.data.payment_data.redirectTo;
-        const invoiceId = result.data.invoice_id;
-        console.log("Fawaterk checkout created, URL:", checkoutUrl, "Invoice ID:", invoiceId);
-
-        // Create a pending transaction in the database
-        const { error: transactionError } = await supabase
-            .from("transactions")
-            .insert({
-                user_id: userId,
-                type: "deposit",
-                amount: parseFloat(amount),
-                payment_method: "fawaterk",
-                payment_reference: invoiceId.toString(), // Save Fawaterk's invoice ID for webhook matching
-                description: `Deposit via Fawaterk (Visa/Mastercard) - Pending`,
-                balance_before: 0,
-                balance_after: 0,
-                status: "pending"
-            });
-
-        if (transactionError) {
-            console.error("Error creating pending transaction:", transactionError);
-        }
-
-        return new Response(
-            JSON.stringify({
-                checkoutUrl: checkoutUrl,
-                checkoutId: invoiceId,
-                orderId: orderId,
-                status: "created",
-            }),
-            {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-                status: 200,
-            }
-        );
-    } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        console.error("Error creating Fawaterk payment:", error);
-        return new Response(
-            JSON.stringify({ error: errorMessage }),
-            {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-                status: 500,
-            }
-        );
+      paymentData = JSON.parse(responseText);
+    } catch {
+      console.error("Failed to parse Fawaterak response:", responseText);
+      throw new Error("Invalid response from Fawaterak");
     }
+
+    if (!paymentRes.ok || paymentData?.status === "error") {
+      console.error("Fawaterak payment error:", JSON.stringify(paymentData));
+      const errMsg = typeof paymentData?.message === "string" 
+        ? paymentData.message 
+        : JSON.stringify(paymentData?.message || "Unknown error");
+      return new Response(
+        JSON.stringify({ error: `Fawaterak error: ${errMsg}` }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const data = paymentData?.data;
+    const invoiceId = data?.invoice_id || data?.invoiceId || data?.invoice?.id;
+    const paymentUrl = data?.payment_data?.redirectTo || 
+                       data?.payment_data?.redirect_to ||
+                       data?.redirectTo ||
+                       data?.redirect_to ||
+                       data?.payment_data?.url;
+
+    if (!paymentUrl) {
+      console.error("No redirect URL found in response:", JSON.stringify(paymentData));
+      throw new Error("No payment URL received from Fawaterak");
+    }
+
+    await supabase.from("transactions").insert({
+      user_id: userId,
+      type: "deposit",
+      amount: amount,
+      balance_before: currentBalance,
+      balance_after: currentBalance,
+      description: `Fawaterak deposit - Invoice: ${invoiceId}`,
+      payment_method: "fawaterak",
+      payment_reference: String(invoiceId),
+    });
+
+    console.log(`Fawaterak payment created: invoiceId=${invoiceId}, url=${paymentUrl}`);
+
+    return new Response(
+      JSON.stringify({ paymentUrl, invoiceId }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error: unknown) {
+    console.error("Error creating Fawaterak payment:", error);
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return new Response(
+      JSON.stringify({ error: message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 });

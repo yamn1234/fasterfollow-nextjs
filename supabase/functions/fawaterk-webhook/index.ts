@@ -1,154 +1,166 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { createHash } from "https://deno.land/std@0.168.0/crypto/mod.ts";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type",
+};
 
 serve(async (req) => {
-    try {
-        // Webhooks are usually POST requests
-        if (req.method !== "POST") {
-            return new Response("Method not allowed", { status: 405 });
-        }
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
 
-        const bodyText = await req.text();
-        let body;
-        try {
-            body = JSON.parse(bodyText);
-        } catch (e) {
-            console.error("Invalid JSON:", bodyText);
-            return new Response("Invalid JSON", { status: 400 });
-        }
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
-        console.log("Received Fawaterk webhook:", body);
+    // Get the frontend URL for redirects
+    const siteUrl = Deno.env.get("SITE_URL") || "https://fasterfollow.lovable.app";
 
-        const supabaseUrl = Deno.env.get("SUPABASE_URL");
-        const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-        // The providerKey from Fawaterk dashboard used to verify the signature
-        const providerKey = Deno.env.get("FAWATERK_PROVIDER_KEY");
+    // Handle GET redirect from Fawaterak (success/fail/pending redirects)
+    if (req.method === "GET") {
+      const url = new URL(req.url);
+      const status = url.searchParams.get("status");
+      const userId = url.searchParams.get("userId");
+      const invoiceId = url.searchParams.get("invoice_id") || url.searchParams.get("fawaterak_invoice_id");
 
-        if (!supabaseUrl || !supabaseServiceKey) {
-            throw new Error("Supabase configuration missing");
-        }
+      console.log(`Fawaterak redirect: status=${status}, userId=${userId}, invoiceId=${invoiceId}`);
 
-        // Verify webhook signature if Fawaterk sends one (HMAC/Hash verification)
-        // Fawaterk typically uses invoice_id, invoice_key, and provider_key to generate the hash
-        // According to Fawaterk docs, the generated signature is:
-        // hash_hmac('sha256', invoice_id + invoice_key, providerKey)
-        if (providerKey && body.invoice_id && body.invoice_key && body.signature) {
-            const dataToHash = `${body.invoice_id}${body.invoice_key}`;
-
-            // Compute SHA256 HMAC (Simplified for Deno Web Crypto API)
-            const key = await crypto.subtle.importKey(
-                "raw",
-                new TextEncoder().encode(providerKey),
-                { name: "HMAC", hash: "SHA-256" },
-                false,
-                ["sign"]
+      if (status === "success" && userId && invoiceId) {
+        // Verify payment with Fawaterak API
+        const apiKey = Deno.env.get("FAWATERAK_API_KEY");
+        if (apiKey) {
+          try {
+            const verifyRes = await fetch(
+              `https://app.fawaterk.com/api/v2/getInvoiceData/${invoiceId}`,
+              {
+                headers: {
+                  "Authorization": `Bearer ${apiKey}`,
+                  "Content-Type": "application/json",
+                },
+              }
             );
 
-            const signatureBuffer = await crypto.subtle.sign(
-                "HMAC",
-                key,
-                new TextEncoder().encode(dataToHash)
-            );
+            const verifyData = await verifyRes.json();
+            console.log("Invoice verification:", JSON.stringify(verifyData));
 
-            // Convert buffer to hex string
-            const signatureArray = Array.from(new Uint8Array(signatureBuffer));
-            const expectedSignature = signatureArray.map(b => b.toString(16).padStart(2, '0')).join('');
+            if (verifyData?.data?.invoice_status === "paid" || verifyData?.data?.status === "paid") {
+              const paidAmount = parseFloat(verifyData.data?.invoice_total || verifyData.data?.total || "0");
 
-            // Note: Some Fawaterk versions use standard SHA256 instead of HMAC.
-            // If the above fails, you might need to adjust based on their exact implementation.
-            console.log(`Verifying Signature - Expected: ${expectedSignature}, Received: ${body.signature}`);
+              if (paidAmount > 0) {
+                // Get current balance
+                const { data: profile } = await supabase
+                  .from("profiles")
+                  .select("balance")
+                  .eq("user_id", userId)
+                  .single();
 
-            if (expectedSignature !== body.signature) {
-                console.error("Invalid Fawaterk webhook signature");
-                // We log the error but don't strictly fail yet to avoid dropping valid webhooks 
-                // if the hashing algorithm differs slightly in their v2 API.
-                // In a strict production environment, this should return a 403.
+                const currentBalance = profile?.balance || 0;
+                const newBalance = currentBalance + paidAmount;
+
+                // Update balance
+                await supabase
+                  .from("profiles")
+                  .update({ balance: newBalance })
+                  .eq("user_id", userId);
+
+                // Update transaction
+                await supabase
+                  .from("transactions")
+                  .update({
+                    balance_after: newBalance,
+                    description: `Fawaterak deposit completed - Invoice: ${invoiceId}`,
+                  })
+                  .eq("payment_reference", String(invoiceId))
+                  .eq("user_id", userId);
+
+                console.log(`Balance updated for user ${userId}: $${currentBalance} -> $${newBalance}`);
+              }
             }
+          } catch (verifyError) {
+            console.error("Error verifying Fawaterak payment:", verifyError);
+          }
         }
 
-        // Process only paid invoices (Fawaterk usually sends status 'paid' or 'success')
-        const status = body.invoice_status || body.status;
-        if (status !== "paid" && status !== "success") {
-            console.log(`Invoice ${body.invoice_id} is not paid. Status: ${status}`);
-            return new Response("OK", { status: 200 }); // Return 200 so Fawaterk stops retrying
-        }
+        // Redirect to dashboard with success
+        return new Response(null, {
+          status: 302,
+          headers: {
+            Location: `${siteUrl}/dashboard?tab=balance&payment=success`,
+          },
+        });
+      }
 
-        const invoiceId = body.invoice_id;
-        if (!invoiceId) {
-            throw new Error("Missing invoice_id in webhook body");
-        }
+      // Failed or pending
+      const redirectStatus = status === "pending" ? "pending" : "failed";
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: `${siteUrl}/dashboard?tab=balance&payment=${redirectStatus}`,
+        },
+      });
+    }
 
-        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    // Handle POST webhook from Fawaterak
+    if (req.method === "POST") {
+      const body = await req.json();
+      console.log("Fawaterak webhook received:", JSON.stringify(body));
 
-        // 1. Find the pending transaction
-        const { data: transaction, error: txError } = await supabase
-            .from("transactions")
-            .select("*")
-            .eq("payment_reference", invoiceId.toString())
-            .eq("payment_method", "fawaterk")
-            .eq("status", "pending")
-            .single();
+      const invoiceId = body.invoice_id || body.InvoiceId;
+      const status = body.payment_status || body.invoice_status || body.status;
 
-        if (txError || !transaction) {
-            console.error(`Pending transaction not found for invoice ${invoiceId}:`, txError);
-            return new Response("Transaction not found or already processed", { status: 200 });
-        }
+      if (status === "paid" && invoiceId) {
+        // Find the transaction
+        const { data: transaction } = await supabase
+          .from("transactions")
+          .select("*")
+          .eq("payment_reference", String(invoiceId))
+          .eq("payment_method", "fawaterak")
+          .single();
 
-        const userId = transaction.user_id;
-        const amount = transaction.amount;
-
-        // 2. Begin "transaction" to update balance and transaction status safely
-        // Since Supabase RPC is best for this, we'll try direct updates first (service role bypasses RLS)
-
-        // Get current balance
-        const { data: profile, error: profileError } = await supabase
+        if (transaction && transaction.balance_after === transaction.balance_before) {
+          // Payment not yet processed
+          const { data: profile } = await supabase
             .from("profiles")
             .select("balance")
-            .eq("user_id", userId)
+            .eq("user_id", transaction.user_id)
             .single();
 
-        if (profileError) {
-            throw new Error(`Failed to fetch profile for user ${userId}`);
-        }
+          const currentBalance = profile?.balance || 0;
+          const newBalance = currentBalance + transaction.amount;
 
-        const currentBalance = profile.balance || 0;
-        const newBalance = currentBalance + amount;
-
-        // Update profile balance
-        const { error: updateProfileError } = await supabase
+          await supabase
             .from("profiles")
             .update({ balance: newBalance })
-            .eq("user_id", userId);
+            .eq("user_id", transaction.user_id);
 
-        if (updateProfileError) {
-            throw new Error(`Failed to update balance for user ${userId}`);
-        }
-
-        // Update transaction status
-        const { error: updateTxError } = await supabase
+          await supabase
             .from("transactions")
             .update({
-                status: "completed",
-                balance_before: currentBalance,
-                balance_after: newBalance,
+              balance_after: newBalance,
+              description: `Fawaterak deposit completed - Invoice: ${invoiceId}`,
             })
             .eq("id", transaction.id);
 
-        if (updateTxError) {
-            console.error(`Failed to update transaction ${transaction.id} status:`, updateTxError);
-            // We don't throw here because the user's balance was already updated successfully.
+          console.log(`Webhook: Balance updated for user ${transaction.user_id}: $${currentBalance} -> $${newBalance}`);
         }
+      }
 
-        console.log(`Successfully processed Fawaterk payment ${invoiceId} for user ${userId}. Added $${amount} to balance.`);
-
-        return new Response(JSON.stringify({ success: true }), {
-            headers: { "Content-Type": "application/json" },
-            status: 200,
-        });
-    } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        console.error("Error processing Fawaterk webhook:", error);
-        return new Response(errorMessage, { status: 500 });
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
+
+    return new Response("Method not allowed", { status: 405 });
+  } catch (error: unknown) {
+    console.error("Fawaterak webhook error:", error);
+    const message = error instanceof Error ? error.message : "Internal server error";
+    return new Response(
+      JSON.stringify({ error: message }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
 });
