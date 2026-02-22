@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { 
-  Wallet, 
-  CreditCard, 
-  Gift, 
+import {
+  Wallet,
+  CreditCard,
+  Gift,
   Sparkles,
   CheckCircle,
   Info,
@@ -40,12 +40,12 @@ interface PaymentGateway {
 const renderTextWithLinks = (text: string) => {
   // Split by newlines first, then process each line for URLs
   const lines = text.split('\n');
-  
+
   return lines.map((line, lineIndex) => {
     // URL regex pattern
     const urlPattern = /(https?:\/\/[^\s]+)/g;
     const parts = line.split(urlPattern);
-    
+
     const elements = parts.map((part, partIndex) => {
       if (urlPattern.test(part)) {
         return (
@@ -62,7 +62,7 @@ const renderTextWithLinks = (text: string) => {
       }
       return <span key={partIndex}>{part}</span>;
     });
-    
+
     return (
       <span key={lineIndex}>
         {elements}
@@ -108,7 +108,7 @@ const BalanceTab = () => {
         .order('sort_order');
 
       if (error) throw error;
-      
+
       setGateways(data || []);
       if (data && data.length > 0) {
         setPaymentMethod(data[0].id);
@@ -150,13 +150,13 @@ const BalanceTab = () => {
 
   const numericAmount = parseFloat(amount) || 0;
   const selectedGateway = gateways.find(g => g.id === paymentMethod);
-  
+
   // Calculate payment fees
   const feePercentage = selectedGateway?.fee_percentage || 0;
   const feeFixed = selectedGateway?.fee_fixed || 0;
   const paymentFee = (numericAmount * feePercentage / 100) + feeFixed;
-  
-  const bonusRate = bonusEnabled 
+
+  const bonusRate = bonusEnabled
     ? bonusRates.find((r) => numericAmount >= r.min_amount)?.bonus_percentage || 0
     : 0;
   const bonusAmount = (numericAmount * bonusRate) / 100;
@@ -180,7 +180,7 @@ const BalanceTab = () => {
     }
 
     setProcessingPayment(true);
-    
+
     try {
       const { data, error } = await supabase.functions.invoke('cryptomus-create-payment', {
         body: {
@@ -212,7 +212,7 @@ const BalanceTab = () => {
     }
 
     setProcessingPayment(true);
-    
+
     try {
       const { data, error } = await supabase.functions.invoke('one-create-payment', {
         body: {
@@ -237,12 +237,44 @@ const BalanceTab = () => {
     }
   };
 
+  const handleFawaterkPayment = async () => {
+    if (!user) {
+      toast.error("يجب تسجيل الدخول أولاً");
+      return;
+    }
+
+    setProcessingPayment(true);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('fawaterk-create-payment', {
+        body: {
+          amount: numericAmount,
+          userId: user.id,
+          currency: "USD",
+        },
+      });
+
+      if (error) throw error;
+
+      if (data?.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+        return;
+      } else {
+        throw new Error("لم يتم الحصول على رابط الدفع");
+      }
+    } catch (error) {
+      console.error("Fawaterk payment error:", error);
+      toast.error("حدث خطأ في إنشاء فاتورة فواتيرك");
+      setProcessingPayment(false);
+    }
+  };
+
   const handleSubmit = async () => {
     if (!selectedGateway) {
       toast.error("يرجى اختيار طريقة الدفع");
       return;
     }
-    
+
     if (numericAmount < selectedGateway.min_amount) {
       toast.error(`الحد الأدنى للشحن هو $${selectedGateway.min_amount}`);
       return;
@@ -265,6 +297,12 @@ const BalanceTab = () => {
       return;
     }
 
+    // Fawaterk payment
+    if (selectedGateway.slug === 'fawaterak') {
+      await handleFawaterkPayment();
+      return;
+    }
+
     // ONE payment (Visa/Mastercard)
     if (selectedGateway.slug === 'one') {
       await handleOnePayment();
@@ -274,8 +312,8 @@ const BalanceTab = () => {
     // إذا كانت طريقة دفع يدوية مع رابط توجيه
     if (selectedGateway.gateway_type === 'manual' && selectedGateway.redirect_url) {
       // فتح الرابط مباشرة في نافذة جديدة
-      const redirectUrl = selectedGateway.redirect_url.startsWith('http') 
-        ? selectedGateway.redirect_url 
+      const redirectUrl = selectedGateway.redirect_url.startsWith('http')
+        ? selectedGateway.redirect_url
         : `https://${selectedGateway.redirect_url}`;
       window.open(redirectUrl, '_blank', 'noopener,noreferrer');
       toast.success('تم فتح صفحة الدفع في نافذة جديدة');
@@ -285,15 +323,19 @@ const BalanceTab = () => {
     toast.success(`تم إرسال طلب شحن بقيمة $${numericAmount.toFixed(2)}`);
   };
 
-  // Handle Cryptomus return
+  // Handle Cryptomus & Fawaterk returns
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const paymentStatus = urlParams.get('payment');
+    const gateway = urlParams.get('gateway');
 
-    // Handle successful Cryptomus payment
+    // Handle successful payments
     if (paymentStatus === 'success') {
-      toast.success('تم إتمام الدفع بنجاح! سيتم تحديث رصيدك خلال لحظات.');
+      toast.success('تم إتمام عملية الدفع بنجاح! سيتم تحديث رصيدك تلقائياً أو خلال لحظات عبر السيرفر.');
       refreshProfile();
+      window.history.replaceState({}, '', '/dashboard?tab=balance');
+    } else if (paymentStatus === 'cancelled') {
+      toast.error('تم إلغاء عملية الدفع.');
       window.history.replaceState({}, '', '/dashboard?tab=balance');
     }
   }, [refreshProfile]);
@@ -318,7 +360,7 @@ const BalanceTab = () => {
                 اختر المبلغ
               </CardTitle>
               <CardDescription>
-                {selectedGateway 
+                {selectedGateway
                   ? `الحد الأدنى $${selectedGateway.min_amount} - الحد الأقصى $${selectedGateway.max_amount}`
                   : 'اختر طريقة الدفع أولاً'
                 }
@@ -381,16 +423,15 @@ const BalanceTab = () => {
                     <Label
                       key={gateway.id}
                       htmlFor={gateway.id}
-                      className={`flex items-center gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all ${
-                        paymentMethod === gateway.id
+                      className={`flex items-center gap-4 p-4 rounded-lg border-2 cursor-pointer transition-all ${paymentMethod === gateway.id
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/30"
-                      }`}
+                        }`}
                     >
                       <RadioGroupItem value={gateway.id} id={gateway.id} />
                       {gateway.image_url ? (
-                        <img 
-                          src={gateway.image_url} 
+                        <img
+                          src={gateway.image_url}
                           alt={gateway.name}
                           className="w-10 h-10 object-contain rounded"
                         />
@@ -442,9 +483,8 @@ const BalanceTab = () => {
                     .map((rate) => (
                       <div
                         key={rate.id}
-                        className={`flex justify-between text-sm p-2 rounded ${
-                          numericAmount >= rate.min_amount ? "bg-primary-foreground/20" : "opacity-60"
-                        }`}
+                        className={`flex justify-between text-sm p-2 rounded ${numericAmount >= rate.min_amount ? "bg-primary-foreground/20" : "opacity-60"
+                          }`}
                       >
                         <span>${rate.min_amount}+</span>
                         <span className="font-bold">+{rate.bonus_percentage}% مكافأة</span>
@@ -493,7 +533,7 @@ const BalanceTab = () => {
               )}
               {bonusAmount > 0 && (
                 <div className="flex justify-between text-green-600">
-                <span className="flex items-center gap-1">
+                  <span className="flex items-center gap-1">
                     <Sparkles className="h-4 w-4" />
                     مكافأة {bonusRate}%
                   </span>
@@ -561,6 +601,11 @@ const BalanceTab = () => {
                     <>
                       <Wallet className="h-5 w-5" />
                       الدفع بالعملات الرقمية
+                    </>
+                  ) : selectedGateway?.slug === 'fawaterak' ? (
+                    <>
+                      <CreditCard className="h-5 w-5" />
+                      الدفع عبر فواتيرك (فيزا/ماستركارد)
                     </>
                   ) : selectedGateway?.slug === 'one' ? (
                     <>
