@@ -1,0 +1,64 @@
+project_id = "jljizjuzliucwcvzrtkr"
+
+[functions.sync-api-balance]
+verify_jwt = false
+
+[functions.smm-import-services]
+verify_jwt = false
+
+[functions.smm-place-order]
+verify_jwt = false
+
+[functions.smm-check-order-status]
+verify_jwt = false
+
+[functions.paypal-get-client-id]
+verify_jwt = false
+
+[functions.paypal-create-order]
+verify_jwt = false
+
+[functions.paypal-capture-order]
+verify_jwt = false
+
+[functions.cryptomus-create-payment]
+verify_jwt = false
+
+[functions.cryptomus-webhook]
+verify_jwt = false
+
+[functions.one-create-payment]
+verify_jwt = false
+
+[functions.one-webhook]
+verify_jwt = false
+
+[functions.sitemap]
+verify_jwt = false
+
+[functions.submit-sitemap]
+verify_jwt = false
+
+[functions.service-meta]
+verify_jwt = false
+
+[functions.send-password-recovery]
+verify_jwt = false
+
+[functions.password-reset-request]
+verify_jwt = false
+
+[functions.password-reset-verify]
+verify_jwt = false
+
+[functions.password-reset-complete]
+verify_jwt = false
+
+[functions.two-factor-send]
+verify_jwt = false
+
+[functions.two-factor-verify]
+verify_jwt = false
+
+[functions.two-factor-toggle]
+verify_jwt = false

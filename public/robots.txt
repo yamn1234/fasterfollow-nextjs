@@ -1,0 +1,220 @@
+# FasterFollow.net Robots.txt - 2025 SEO Optimized
+# Last updated: 2025-01-19
+
+# ===========================================
+# Google Bots
+# ===========================================
+User-agent: Googlebot
+Allow: /
+Allow: /services/
+Allow: /blog/
+Allow: /page/
+Disallow: /auth
+Disallow: /auth/*
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /api/*
+Allow: /services?category=*
+Disallow: /auth?*
+Disallow: /dashboard?*
+Disallow: /admin?*
+Crawl-delay: 1
+
+User-agent: Googlebot-Image
+Allow: /
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.png$
+Allow: /*.webp$
+Allow: /*.gif$
+Allow: /*.svg$
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: Googlebot-Video
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: Googlebot-News
+Allow: /blog/
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+
+# ===========================================
+# Microsoft / Bing Bots
+# ===========================================
+User-agent: Bingbot
+Allow: /
+Allow: /services/
+Allow: /blog/
+Allow: /page/
+Disallow: /auth
+Disallow: /auth/*
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /api/*
+Allow: /services?category=*
+Disallow: /auth?*
+Disallow: /dashboard?*
+Disallow: /admin?*
+Crawl-delay: 1
+
+User-agent: msnbot
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+
+# ===========================================
+# Social Media Bots (Allow Full Access)
+# ===========================================
+User-agent: Twitterbot
+Allow: /
+
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
+User-agent: Pinterest
+Allow: /
+
+User-agent: WhatsApp
+Allow: /
+
+User-agent: TelegramBot
+Allow: /
+
+User-agent: Snapchat
+Allow: /
+
+# ===========================================
+# Other Search Engines
+# ===========================================
+User-agent: Slurp
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+Crawl-delay: 2
+
+User-agent: DuckDuckBot
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+Crawl-delay: 1
+
+User-agent: Baiduspider
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+Crawl-delay: 2
+
+User-agent: YandexBot
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+Crawl-delay: 2
+
+# ===========================================
+# AI Crawlers (Allow for GEO visibility)
+# ===========================================
+User-agent: GPTBot
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: Claude-Web
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+
+User-agent: anthropic-ai
+Allow: /
+Disallow: /auth
+Disallow: /dashboard
+Disallow: /admin
+
+# Block AI training-only bots
+User-agent: Google-Extended
+Disallow: /
+
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: cohere-ai
+Disallow: /
+
+# ===========================================
+# SEO Tools (Allow)
+# ===========================================
+User-agent: AhrefsBot
+Allow: /
+Crawl-delay: 5
+
+User-agent: SemrushBot
+Allow: /
+Crawl-delay: 5
+
+User-agent: Screaming Frog SEO Spider
+Allow: /
+
+# ===========================================
+# Default Rule for All Other Bots
+# ===========================================
+User-agent: *
+Allow: /
+Allow: /services/
+Allow: /blog/
+Allow: /page/
+Disallow: /auth
+Disallow: /auth/*
+Disallow: /dashboard
+Disallow: /dashboard/*
+Disallow: /admin
+Disallow: /admin/*
+Disallow: /api/*
+Allow: /services?category=*
+Disallow: /auth?*
+Disallow: /dashboard?*
+Disallow: /admin?*
+Crawl-delay: 2
+
+# ===========================================
+# Sitemap Location
+# ===========================================
+Sitemap: https://fasterfollow.net/sitemap.xml
+
+# ===========================================
+# Host Directive (for Yandex)
+# ===========================================
+Host: https://fasterfollow.net

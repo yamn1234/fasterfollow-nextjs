@@ -1,0 +1,14 @@
+# Sitemap - Force XML Content-Type
+/sitemap.xml
+  Content-Type: application/xml; charset=utf-8
+  X-Content-Type-Options: nosniff
+  Cache-Control: public, max-age=300, s-maxage=300, must-revalidate
+
+# Robots.txt
+/robots.txt
+  Content-Type: text/plain; charset=utf-8
+  Cache-Control: public, max-age=86400
+
+# IndexNow verification key
+/fasterfollow2025seokey.txt
+  Content-Type: text/plain; charset=utf-8
