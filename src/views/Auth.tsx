@@ -23,7 +23,7 @@ const passwordSchema = z.string()
   .regex(/[0-9]/, "كلمة المرور يجب أن تحتوي على أرقام");
 
 const Auth = () => {
-  const [searchParams] = useSearchParams();
+  const searchParams = useSearchParams();
   const [isLogin, setIsLogin] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isVerifyCode, setIsVerifyCode] = useState(false);
@@ -42,7 +42,7 @@ const Auth = () => {
   const [codeExpiresAt, setCodeExpiresAt] = useState<Date | null>(null);
   const [remainingTime, setRemainingTime] = useState(0);
   const [errors, setErrors] = useState<{ email?: string; password?: string; fullName?: string; confirmPassword?: string; otp?: string }>({});
-  
+
   const { signIn, signUp } = useAuth();
   const router = useRouter();
 
@@ -57,17 +57,17 @@ const Auth = () => {
   // Countdown timer for OTP expiry
   useEffect(() => {
     if (!codeExpiresAt) return;
-    
+
     const interval = setInterval(() => {
       const now = new Date();
       const diff = Math.max(0, Math.floor((codeExpiresAt.getTime() - now.getTime()) / 1000));
       setRemainingTime(diff);
-      
+
       if (diff === 0) {
         clearInterval(interval);
       }
     }, 1000);
-    
+
     return () => clearInterval(interval);
   }, [codeExpiresAt]);
 
@@ -94,7 +94,7 @@ const Auth = () => {
     try {
       // Use our custom OTP system
       const { data, error } = await supabase.functions.invoke('password-reset-request', {
-        body: { 
+        body: {
           email,
           ip_address: null,
           user_agent: navigator.userAgent
@@ -123,7 +123,7 @@ const Auth = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('password-reset-request', {
-        body: { 
+        body: {
           email,
           ip_address: null,
           user_agent: navigator.userAgent
@@ -181,7 +181,7 @@ const Auth = () => {
 
   const validateForm = () => {
     const newErrors: { email?: string; password?: string; fullName?: string } = {};
-    
+
     try {
       emailSchema.parse(email);
     } catch (e) {
@@ -189,7 +189,7 @@ const Auth = () => {
         newErrors.email = e.errors[0].message;
       }
     }
-    
+
     try {
       passwordSchema.parse(password);
     } catch (e) {
@@ -197,20 +197,20 @@ const Auth = () => {
         newErrors.password = e.errors[0].message;
       }
     }
-    
+
     if (!isLogin && !fullName.trim()) {
       newErrors.fullName = "الاسم الكامل مطلوب";
     }
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
-    
+
     setIsLoading(true);
 
     try {
@@ -220,7 +220,7 @@ const Auth = () => {
           email,
           password,
         });
-        
+
         if (userData?.user) {
           // Check if 2FA is enabled
           const { data: profileData } = await supabase
@@ -228,7 +228,7 @@ const Auth = () => {
             .select("two_factor_enabled, is_suspended, suspension_reason")
             .eq("user_id", userData.user.id)
             .single();
-          
+
           // Check suspension
           if (profileData?.is_suspended) {
             await supabase.auth.signOut();
@@ -236,22 +236,22 @@ const Auth = () => {
             setIsLoading(false);
             return;
           }
-          
+
           if (profileData?.two_factor_enabled) {
             // Sign out first, then require 2FA
             await supabase.auth.signOut();
-            
+
             // Send 2FA code
             const { data: sendData, error: sendError } = await supabase.functions.invoke("two-factor-send", {
               body: { user_id: userData.user.id, email }
             });
-            
+
             if (sendError || !sendData?.success) {
               toast.error(sendData?.error || "فشل إرسال رمز التحقق");
               setIsLoading(false);
               return;
             }
-            
+
             setPending2FAUserId(userData.user.id);
             setIs2FAVerify(true);
             setCodeExpiresAt(new Date(Date.now() + 10 * 60 * 1000));
@@ -288,35 +288,35 @@ const Auth = () => {
 
   const handle2FAVerify = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!otpCode || otpCode.length !== 6) {
       setErrors({ otp: "يرجى إدخال رمز التحقق المكون من 6 أرقام" });
       return;
     }
-    
+
     if (!pending2FAUserId) {
       toast.error("جلسة غير صالحة. يرجى تسجيل الدخول مرة أخرى.");
       setIs2FAVerify(false);
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       // Verify 2FA code
       const { data: verifyData, error: verifyError } = await supabase.functions.invoke("two-factor-verify", {
         body: { user_id: pending2FAUserId, code: otpCode }
       });
-      
+
       if (verifyError || !verifyData?.success) {
         toast.error(verifyData?.error || "رمز التحقق غير صحيح");
         setIsLoading(false);
         return;
       }
-      
+
       // Sign in again
       const { error: signInError } = await signIn(email, password);
-      
+
       if (signInError) {
         toast.error("حدث خطأ أثناء تسجيل الدخول");
         setIs2FAVerify(false);
@@ -333,14 +333,14 @@ const Auth = () => {
 
   const handleResend2FACode = async () => {
     if (!pending2FAUserId) return;
-    
+
     setIsLoading(true);
-    
+
     try {
       const { data, error } = await supabase.functions.invoke("two-factor-send", {
         body: { user_id: pending2FAUserId, email }
       });
-      
+
       if (error || !data?.success) {
         toast.error(data?.error || "فشل إعادة إرسال الرمز");
       } else {
@@ -375,9 +375,9 @@ const Auth = () => {
   // Handle password reset
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     const newErrors: { password?: string; confirmPassword?: string } = {};
-    
+
     try {
       passwordSchema.parse(password);
     } catch (err) {
@@ -385,18 +385,18 @@ const Auth = () => {
         newErrors.password = err.errors[0].message;
       }
     }
-    
+
     if (password !== confirmPassword) {
       newErrors.confirmPassword = "كلمتا المرور غير متطابقتين";
     }
-    
+
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
       return;
     }
-    
+
     setIsLoading(true);
-    
+
     try {
       // Use our custom password reset system if we have a reset token
       if (resetToken && email) {
@@ -421,7 +421,7 @@ const Auth = () => {
         const { error } = await supabase.auth.updateUser({
           password: password
         });
-        
+
         if (error) {
           toast.error(error.message);
         } else {

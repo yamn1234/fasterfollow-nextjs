@@ -37,15 +37,15 @@ import SEOHead from '@/components/SEOHead';
 
 const Services = () => {
   const router = useRouter();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const searchParams = useSearchParams();
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const { categories, services, loading } = useServices();
 
   const [searchQuery, setSearchQuery] = useState('');
   const categoryParam = searchParams.get('category') || 'all';
-  
-  
+
+
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [orderLink, setOrderLink] = useState('');
@@ -61,7 +61,7 @@ const Services = () => {
     }
     // Wait for categories to load
     if (categories.length === 0) return;
-    
+
     // Check if it's a UUID
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(categoryParam);
     if (isUUID) {
@@ -96,12 +96,13 @@ const Services = () => {
 
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value);
+    const params = new URLSearchParams(searchParams.toString());
     if (value === 'all') {
-      searchParams.delete('category');
+      params.delete('category');
     } else {
-      searchParams.set('category', value);
+      params.set('category', value);
     }
-    setSearchParams(searchParams);
+    router.push(`?${params.toString()}`);
   };
 
   const openOrderDialog = (service: Service) => {
