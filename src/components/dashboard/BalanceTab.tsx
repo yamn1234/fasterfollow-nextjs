@@ -237,7 +237,7 @@ const BalanceTab = () => {
     }
   };
 
-  const handleFawaterkPayment = async () => {
+  const handleFawaterkPayment = async (paymentMethodId: number = 2) => {
     if (!user) {
       toast.error("يجب تسجيل الدخول أولاً");
       return;
@@ -251,6 +251,7 @@ const BalanceTab = () => {
           amount: numericAmount,
           userId: user.id,
           currency: "USD",
+          paymentMethodId,
         },
       });
 
@@ -297,9 +298,9 @@ const BalanceTab = () => {
       return;
     }
 
-    // Fawaterk payment
-    if (selectedGateway.slug === 'fawaterak') {
-      await handleFawaterkPayment();
+    // Fawaterk payment & Fawaterk Apple Pay
+    if (selectedGateway.slug === 'fawaterak' || selectedGateway.slug === 'fawaterk_applepay') {
+      await handleFawaterkPayment(selectedGateway.slug === 'fawaterk_applepay' ? 3 : 2);
       return;
     }
 

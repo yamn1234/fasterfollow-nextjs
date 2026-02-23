@@ -32,7 +32,7 @@ serve(async (req) => {
       throw new Error("Fawaterak API key not configured");
     }
 
-    const { amount, userId } = await req.json();
+    const { amount, userId, paymentMethodId } = await req.json();
 
     if (!amount || amount <= 0) {
       return new Response(
@@ -69,7 +69,7 @@ serve(async (req) => {
     const webhookUrl = `${supabaseUrl}/functions/v1/fawaterak-webhook`;
 
     const requestBody: Record<string, unknown> = {
-      payment_method_id: 2,
+      payment_method_id: paymentMethodId || 2,
       cartTotal: amount.toFixed(2),
       currency: "USD",
       customer: {
@@ -124,8 +124,8 @@ serve(async (req) => {
 
     if (!paymentRes.ok || paymentData?.status === "error") {
       console.error("Fawaterak payment error:", JSON.stringify(paymentData));
-      const errMsg = typeof paymentData?.message === "string" 
-        ? paymentData.message 
+      const errMsg = typeof paymentData?.message === "string"
+        ? paymentData.message
         : JSON.stringify(paymentData?.message || "Unknown error");
       return new Response(
         JSON.stringify({ error: `Fawaterak error: ${errMsg}` }),
@@ -135,11 +135,11 @@ serve(async (req) => {
 
     const data = paymentData?.data;
     const invoiceId = data?.invoice_id || data?.invoiceId || data?.invoice?.id;
-    const paymentUrl = data?.payment_data?.redirectTo || 
-                       data?.payment_data?.redirect_to ||
-                       data?.redirectTo ||
-                       data?.redirect_to ||
-                       data?.payment_data?.url;
+    const paymentUrl = data?.payment_data?.redirectTo ||
+      data?.payment_data?.redirect_to ||
+      data?.redirectTo ||
+      data?.redirect_to ||
+      data?.payment_data?.url;
 
     if (!paymentUrl) {
       console.error("No redirect URL found in response:", JSON.stringify(paymentData));
