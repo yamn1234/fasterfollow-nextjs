@@ -92,19 +92,58 @@ const AdminUsers = () => {
     try {
       setLoading(true);
 
-      const { data: usersData, error } = await supabase.functions.invoke('admin-get-users');
+      // Fetch profiles directly
+      const { data: profiles, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
 
       if (error) {
         console.error('Profile fetch error:', error);
         throw error;
       }
 
-      if (!usersData || usersData.length === 0) {
+      if (!profiles || profiles.length === 0) {
         setUsers([]);
         return;
       }
 
-      setUsers(usersData);
+      // Fetch roles for each user
+      const usersWithRoles = await Promise.all(
+        profiles.map(async (profile) => {
+          const { data: roleData } = await supabase
+            .from('user_roles')
+            .select('role')
+            .eq('user_id', profile.user_id)
+            .maybeSingle();
+
+          return {
+            ...profile,
+            role: roleData?.role || 'user',
+          };
+        })
+      );
+
+      // Try to enrich with emails via edge function (optional, non-blocking)
+      try {
+        const { data: enriched } = await supabase.functions.invoke('admin-get-users');
+        if (enriched && enriched.length > 0) {
+          const emailMap: Record<string, string> = {};
+          enriched.forEach((u: { user_id: string; email?: string }) => {
+            if (u.email) emailMap[u.user_id] = u.email;
+          });
+          const withEmails = usersWithRoles.map(u => ({
+            ...u,
+            email: emailMap[u.user_id] || u.email || undefined,
+          }));
+          setUsers(withEmails);
+          return;
+        }
+      } catch {
+        // Edge function not available, continue without emails
+      }
+
+      setUsers(usersWithRoles);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
