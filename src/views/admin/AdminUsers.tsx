@@ -91,39 +91,20 @@ const AdminUsers = () => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      
-      const { data: profiles, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .order('created_at', { ascending: false });
+
+      const { data: usersData, error } = await supabase.functions.invoke('admin-get-users');
 
       if (error) {
         console.error('Profile fetch error:', error);
         throw error;
       }
 
-      if (!profiles || profiles.length === 0) {
+      if (!usersData || usersData.length === 0) {
         setUsers([]);
         return;
       }
 
-      // Fetch roles for each user
-      const usersWithRoles = await Promise.all(
-        profiles.map(async (profile) => {
-          const { data: roleData } = await supabase
-            .from('user_roles')
-            .select('role')
-            .eq('user_id', profile.user_id)
-            .maybeSingle();
-
-          return {
-            ...profile,
-            role: roleData?.role || 'user',
-          };
-        })
-      );
-
-      setUsers(usersWithRoles);
+      setUsers(usersData);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -182,7 +163,8 @@ const AdminUsers = () => {
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.user_id.toLowerCase().includes(searchQuery.toLowerCase());
+      user.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
@@ -318,6 +300,7 @@ const AdminUsers = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>المستخدم</TableHead>
+                  <TableHead>البريد الإلكتروني</TableHead>
                   <TableHead>الدور</TableHead>
                   <TableHead>الرصيد</TableHead>
                   <TableHead>تاريخ التسجيل</TableHead>
@@ -356,6 +339,9 @@ const AdminUsers = () => {
                             </p>
                           </div>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm text-muted-foreground">{user.email || 'غير متوفر'}</span>
                       </TableCell>
                       <TableCell>
                         <Badge className={roleColors[user.role || 'user']}>
