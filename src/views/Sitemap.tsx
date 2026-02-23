@@ -1,3 +1,4 @@
+"use client";
 import { useEffect } from 'react';
 
 const Sitemap = () => {
@@ -5,7 +6,7 @@ const Sitemap = () => {
     // Redirect directly to the Edge Function for proper XML content-type
     const baseUrl = 'https://fasterfollow.net';
     const sitemapUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/sitemap?baseUrl=${encodeURIComponent(baseUrl)}`;
-    
+
     // Use replace to avoid adding to browser history
     window.location.replace(sitemapUrl);
   }, []);
