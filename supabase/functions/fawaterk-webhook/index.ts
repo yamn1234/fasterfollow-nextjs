@@ -18,7 +18,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Get the frontend URL for redirects
-    const siteUrl = Deno.env.get("SITE_URL") || "https://fasterfollow.lovable.app";
+    const siteUrl = Deno.env.get("SITE_URL") || "https://fasterfollow.net";
 
     // Handle GET redirect from Fawaterak (success/fail/pending redirects)
     if (req.method === "GET") {
@@ -47,37 +47,59 @@ serve(async (req) => {
             const verifyData = await verifyRes.json();
             console.log("Invoice verification:", JSON.stringify(verifyData));
 
-            if (verifyData?.data?.invoice_status === "paid" || verifyData?.data?.status === "paid") {
-              const paidAmount = parseFloat(verifyData.data?.invoice_total || verifyData.data?.total || "0");
+            const invoiceStatus = verifyData?.data?.invoice_status;
+            const apiStatus = verifyData?.data?.status;
+            const statusText = verifyData?.data?.status_text;
 
-              if (paidAmount > 0) {
+            if (invoiceStatus === "paid" || apiStatus === "paid" || apiStatus === 1 || statusText === "paid") {
+              // Find the transaction to get the exact USD amount
+              const { data: transaction } = await supabase
+                .from("transactions")
+                .select("*")
+                .eq("payment_reference", String(invoiceId))
+                .eq("payment_method", "fawaterak")
+                .single();
+
+              if (transaction && transaction.balance_after === transaction.balance_before) {
+                const baseAmount = Number(transaction.amount);
+
+                // Fetch gateway config for bonus
+                const { data: gateways } = await supabase
+                  .from("payment_gateways")
+                  .select("bonus_percentage")
+                  .eq("slug", "fawaterak")
+                  .eq("is_active", true);
+
+                const bonusPercentage = gateways && gateways.length > 0 ? (gateways[0].bonus_percentage || 0) : 0;
+                const bonusAmount = baseAmount * (bonusPercentage / 100);
+                const totalAmountToAdd = baseAmount + bonusAmount;
+
                 // Get current balance
                 const { data: profile } = await supabase
                   .from("profiles")
                   .select("balance")
-                  .eq("user_id", userId)
+                  .eq("user_id", transaction.user_id)
                   .single();
 
-                const currentBalance = profile?.balance || 0;
-                const newBalance = currentBalance + paidAmount;
+                const currentBalance = Number(profile?.balance || 0);
+                const newBalance = currentBalance + totalAmountToAdd;
 
                 // Update balance
                 await supabase
                   .from("profiles")
                   .update({ balance: newBalance })
-                  .eq("user_id", userId);
+                  .eq("user_id", transaction.user_id);
 
                 // Update transaction
                 await supabase
                   .from("transactions")
                   .update({
                     balance_after: newBalance,
-                    description: `Fawaterak deposit completed - Invoice: ${invoiceId}`,
+                    description: `Fawaterak deposit completed - Invoice: ${invoiceId} (Bonus: $${bonusAmount.toFixed(2)})`,
                   })
-                  .eq("payment_reference", String(invoiceId))
-                  .eq("user_id", userId);
+                  .eq("id", transaction.id);
 
-                console.log(`Balance updated for user ${userId}: $${currentBalance} -> $${newBalance}`);
+                console.log(`Balance updated for user ${transaction.user_id}: $${currentBalance} -> $${newBalance} (including $${bonusAmount} bonus)`);
               }
             }
           } catch (verifyError) {
@@ -111,8 +133,9 @@ serve(async (req) => {
 
       const invoiceId = body.invoice_id || body.InvoiceId;
       const status = body.payment_status || body.invoice_status || body.status;
+      const statusText = body.status_text;
 
-      if (status === "paid" && invoiceId) {
+      if ((status === "paid" || status === 1 || statusText === "paid") && invoiceId) {
         // Find the transaction
         const { data: transaction } = await supabase
           .from("transactions")
@@ -122,6 +145,19 @@ serve(async (req) => {
           .single();
 
         if (transaction && transaction.balance_after === transaction.balance_before) {
+          const baseAmount = Number(transaction.amount);
+
+          // Fetch gateway config for bonus
+          const { data: gateways } = await supabase
+            .from("payment_gateways")
+            .select("bonus_percentage")
+            .eq("slug", "fawaterak")
+            .eq("is_active", true);
+
+          const bonusPercentage = gateways && gateways.length > 0 ? (gateways[0].bonus_percentage || 0) : 0;
+          const bonusAmount = baseAmount * (bonusPercentage / 100);
+          const totalAmountToAdd = baseAmount + bonusAmount;
+
           // Payment not yet processed
           const { data: profile } = await supabase
             .from("profiles")
@@ -129,8 +165,8 @@ serve(async (req) => {
             .eq("user_id", transaction.user_id)
             .single();
 
-          const currentBalance = profile?.balance || 0;
-          const newBalance = currentBalance + transaction.amount;
+          const currentBalance = Number(profile?.balance || 0);
+          const newBalance = currentBalance + totalAmountToAdd;
 
           await supabase
             .from("profiles")
@@ -141,11 +177,11 @@ serve(async (req) => {
             .from("transactions")
             .update({
               balance_after: newBalance,
-              description: `Fawaterak deposit completed - Invoice: ${invoiceId}`,
+              description: `Fawaterak deposit completed - Invoice: ${invoiceId} (Bonus: $${bonusAmount.toFixed(2)})`,
             })
             .eq("id", transaction.id);
 
-          console.log(`Webhook: Balance updated for user ${transaction.user_id}: $${currentBalance} -> $${newBalance}`);
+          console.log(`Webhook: Balance updated for user ${transaction.user_id}: $${currentBalance} -> $${newBalance} (including $${bonusAmount} bonus)`);
         }
       }
 
