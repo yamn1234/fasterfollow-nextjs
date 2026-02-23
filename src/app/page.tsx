@@ -7,7 +7,7 @@ export const metadata = {
   openGraph: {
     title: "الرئيسية | فاستر فولو",
     description: "أفضل وأسرع منصة لزيادة وتكبير حسابات التواصل الاجتماعي.",
-    url: "https://fasterfollow.site",
+    url: "https://fasterfollow.net",
     siteName: "FasterFollow",
     locale: "ar_SA",
     type: "website",

@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { supabase } from '@/integrations/supabase/client';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-    const baseUrl = 'https://fasterfollow.site';
+    const baseUrl = 'https://fasterfollow.net';
 
     // Base static routes
     const staticRoutes = [

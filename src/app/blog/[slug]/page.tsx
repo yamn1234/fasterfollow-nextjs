@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       title: title,
       description: desc,
       images: image ? [image] : [],
-      url: `https://fasterfollow.site/blog/${params.slug}`,
+      url: `https://fasterfollow.net/blog/${params.slug}`,
       type: "article",
     },
   };

@@ -7,7 +7,7 @@ export const metadata = {
   openGraph: {
     title: "خدماتنا | فاستر فولو",
     description: "اطلع على قائمة خدمات منصات التواصل الاجتماعي المتاحة وبأقل الأسعار في السوق.",
-    url: "https://fasterfollow.site/services",
+    url: "https://fasterfollow.net/services",
   },
 };
 

@@ -7,7 +7,7 @@ export const metadata = {
   openGraph: {
     title: "المدونة | فاستر فولو",
     description: "اكتشف أسرار وأدوات تصدر منصات السوشيال ميديا.",
-    url: "https://fasterfollow.site/blog",
+    url: "https://fasterfollow.net/blog",
   },
 };
 
