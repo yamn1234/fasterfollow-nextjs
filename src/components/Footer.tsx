@@ -1,4 +1,5 @@
 import { ShoppingCart, Mail, MessageCircle, Phone, Send } from "lucide-react";
+import Image from "next/image";
 import { useHeaderFooterSettings } from "@/hooks/useHeaderFooterSettings";
 import { useTranslation } from "@/hooks/useTranslation";
 
@@ -37,13 +38,13 @@ const Footer = () => {
           <div className="lg:col-span-1">
             <a href="/" className="flex items-center gap-2 mb-4">
               {footerSettings.logo_url ? (
-                <img
-                  src={footerSettings.logo_url}
+                <Image
+                  src={`${footerSettings.logo_url}?width=80&quality=80`}
                   alt={footerSettings.logo_text}
-                  width="40"
-                  height="40"
-                  loading="lazy"
+                  width={40}
+                  height={40}
                   className="h-10 w-10 rounded-xl object-cover"
+                  unoptimized={footerSettings.logo_url.startsWith('https://jljizjuzliucwcvzrtkr')}
                 />
               ) : (
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary">

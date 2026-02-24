@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Menu, X, ShoppingCart, User, LayoutDashboard, LogIn } from "lucide-react";
@@ -22,13 +23,14 @@ const Header = () => {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2 min-w-0">
           {headerSettings.logo_url ? (
-            <img
-              src={headerSettings.logo_url}
+            <Image
+              src={`${headerSettings.logo_url}?width=80&quality=80`}
               alt={headerSettings.logo_text}
-              width="40"
-              height="40"
+              width={40}
+              height={40}
               className="h-10 w-10 rounded-xl object-cover"
-              fetchPriority="high"
+              priority
+              unoptimized={headerSettings.logo_url.startsWith('https://jljizjuzliucwcvzrtkr')}
             />
           ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary">
@@ -66,7 +68,7 @@ const Header = () => {
         {/* Actions */}
         <div className="flex items-center gap-2 sm:gap-3">
           <LanguageToggle variant="text" />
-          
+
           {user && headerSettings.show_balance && (
             <div className="hidden sm:flex items-center gap-2 px-4 py-2 bg-secondary rounded-lg">
               <span className="text-sm text-muted-foreground">{t('yourBalance')}</span>
