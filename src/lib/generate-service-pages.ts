@@ -29,6 +29,9 @@ interface Service {
   min_quantity: number | null;
   max_quantity: number | null;
   delivery_time: string | null;
+  category?: {
+    image_url: string | null;
+  } | null;
 }
 
 function escapeHtml(text: string | null): string {
@@ -48,7 +51,11 @@ function generateServiceHTML(service: Service): string {
   const keywords = service.seo_keywords || '';
   const ogTitle = service.og_title || title;
   const ogDescription = service.og_description || description;
-  const ogImage = service.og_image || service.image_url || `${BASE_URL}/og-image.png`;
+
+  // Use service image or fallback to category image
+  const serviceImage = service.image_url || service.category?.image_url || `${BASE_URL}/og-image.png`;
+  const ogImage = service.og_image || serviceImage;
+
   const canonicalUrl = `${BASE_URL}/services/${service.slug}`;
 
   // Clean description for meta (remove newlines, limit length)
@@ -160,26 +167,29 @@ function generateServiceHTML(service: Service): string {
     h1 { color: #1a1a2e; font-size: 28px; margin-bottom: 16px; }
     nav a { color: #7c3aed; text-decoration: none; }
     footer a { color: #7c3aed; text-decoration: none; }
+    .service-img { width: 100%; max-height: 400px; object-contain: cover; border-radius: 12px; margin-bottom: 20px; }
   </style>
 </head>
 <body>
   <nav style="margin-bottom: 20px; font-size: 14px; color: #666;">
     <a href="/">الرئيسية</a> / 
     <a href="/services">الخدمات</a> / 
-    <span>\${escapeHtml(service.name_ar || service.name)}</span>
+    <span>${escapeHtml(service.name_ar || service.name)}</span>
   </nav>
   
   <article>
-    <h1>\${escapeHtml(service.name_ar || service.name)}</h1>
+    <h1>${escapeHtml(service.name_ar || service.name)}</h1>
     
     <div class="card">
-      <p style="color: #666; font-size: 16px; line-height: 1.8;">\${escapeHtml(service.description_ar || service.description || 'خدمة احترافية من فاستر فولو')}</p>
+      ${serviceImage ? `<img src="${serviceImage}" alt="${escapeHtml(service.name_ar || service.name)}" class="service-img">` : ''}
+      
+      <p style="color: #666; font-size: 16px; line-height: 1.8;">${escapeHtml(service.description_ar || service.description || 'خدمة احترافية من فاستر فولو')}</p>
       
       <div class="info-box">
-        <p><strong>السعر:</strong> $\${service.price} لكل 1000</p>
-        \${service.min_quantity ? \`<p><strong>الحد الأدنى:</strong> \${service.min_quantity}</p>\` : ''}
-        \${service.max_quantity ? \`<p><strong>الحد الأقصى:</strong> \${service.max_quantity}</p>\` : ''}
-        \${service.delivery_time ? \`<p><strong>وقت التنفيذ:</strong> \${escapeHtml(service.delivery_time)}</p>\` : ''}
+        <p><strong>السعر:</strong> $${service.price} لكل 1000</p>
+        ${service.min_quantity ? `<p><strong>الحد الأدنى:</strong> ${service.min_quantity}</p>` : ''}
+        ${service.max_quantity ? `<p><strong>الحد الأقصى:</strong> ${service.max_quantity}</p>` : ''}
+        ${service.delivery_time ? `<p><strong>وقت التنفيذ:</strong> ${escapeHtml(service.delivery_time)}</p>` : ''}
       </div>
     </div>
     
@@ -211,7 +221,7 @@ function generateServiceHTML(service: Service): string {
   </section>
   
   <footer style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #888; font-size: 14px;">
-    <p>© \${new Date().getFullYear()} فاستر فولو - جميع الحقوق محفوظة</p>
+    <p>© ${new Date().getFullYear()} فاستر فولو - جميع الحقوق محفوظة</p>
     <nav style="margin-top: 8px;">
       <a href="/" style="color: #7c3aed; margin: 0 8px;">الرئيسية</a> |
       <a href="/services" style="color: #7c3aed; margin: 0 8px;">الخدمات</a> |
@@ -245,7 +255,8 @@ async function generateServicePages() {
       slug, name, name_ar, description, description_ar,
       seo_title, seo_description, seo_keywords,
       og_title, og_description, og_image, image_url,
-      price, min_quantity, max_quantity, delivery_time
+      price, min_quantity, max_quantity, delivery_time,
+      category:service_categories(image_url)
     `)
     .eq('is_active', true)
     .eq('is_archived', false);
@@ -268,7 +279,15 @@ async function generateServicePages() {
   // Generate HTML for each service
   for (const service of services) {
     try {
-      const html = generateServiceHTML(service as Service);
+      // Supabase joins return an array, take the first element
+      const serviceData = {
+        ...service,
+        category: (service.category && Array.isArray(service.category))
+          ? service.category[0]
+          : (service.category || null)
+      } as unknown as Service;
+
+      const html = generateServiceHTML(serviceData);
       const filePath = path.join(OUTPUT_DIR, `${service.slug}.html`);
       fs.writeFileSync(filePath, html, 'utf-8');
 
