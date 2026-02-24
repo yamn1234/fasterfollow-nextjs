@@ -147,6 +147,9 @@ const defaultCTASettings: CTASettings = {
   },
 };
 
+const CACHE_KEY = 'ff_homepage_settings';
+const CACHE_TTL = 3600000; // 1 hour
+
 export const useHomepageSettings = () => {
   const [sections, setSections] = useState<HomepageSection[]>(defaultSections);
   const [heroSettings, setHeroSettings] = useState<HeroSettings>(defaultHeroSettings);
@@ -158,6 +161,26 @@ export const useHomepageSettings = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Try to load from cache
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    if (cachedData) {
+      try {
+        const { timestamp, settings } = JSON.parse(cachedData);
+        if (Date.now() - timestamp < CACHE_TTL) {
+          setSections(settings.sections);
+          setHeroSettings(settings.heroSettings);
+          setSiteSettings(settings.siteSettings);
+          setServicesSettings(settings.servicesSettings);
+          setPlatformsSettings(settings.platformsSettings);
+          setFeaturesSettings(settings.featuresSettings);
+          setCtaSettings(settings.ctaSettings);
+          setLoading(false);
+        }
+      } catch (e) {
+        console.warn('Failed to parse homepage settings cache', e);
+      }
+    }
+
     loadSettings();
   }, []);
 
@@ -172,6 +195,14 @@ export const useHomepageSettings = () => {
         ]);
 
       if (data) {
+        let newSections = [...defaultSections];
+        let newHero = { ...defaultHeroSettings };
+        let newSite = { ...defaultSiteSettings };
+        let newServices = { ...defaultServicesSettings };
+        let newPlatforms = { ...defaultPlatformsSettings };
+        let newFeatures = { ...defaultFeaturesSettings };
+        let newCTA = { ...defaultCTASettings };
+
         data.forEach(item => {
           try {
             let value = item.value;
@@ -179,36 +210,55 @@ export const useHomepageSettings = () => {
               try {
                 value = JSON.parse(value);
               } catch {
-                // استخدم القيمة كما هي
+                // use as is
               }
             }
 
             if (item.key === 'homepage_sections' && Array.isArray(value)) {
-              setSections(value as unknown as HomepageSection[]);
+              newSections = value as unknown as HomepageSection[];
             } else if (item.key === 'hero_settings' && value && typeof value === 'object' && !Array.isArray(value)) {
-              setHeroSettings(prev => ({ ...prev, ...(value as unknown as Partial<HeroSettings>) }));
+              newHero = { ...newHero, ...(value as unknown as Partial<HeroSettings>) };
             } else if (item.key === 'services_settings' && value && typeof value === 'object' && !Array.isArray(value)) {
-              setServicesSettings(prev => ({ ...prev, ...(value as unknown as Partial<ServicesSettings>) }));
+              newServices = { ...newServices, ...(value as unknown as Partial<ServicesSettings>) };
             } else if (item.key === 'platforms_settings' && value && typeof value === 'object' && !Array.isArray(value)) {
-              setPlatformsSettings(prev => ({ ...prev, ...(value as unknown as Partial<PlatformsSettings>) }));
+              newPlatforms = { ...newPlatforms, ...(value as unknown as Partial<PlatformsSettings>) };
             } else if (item.key === 'features_settings' && value && typeof value === 'object' && !Array.isArray(value)) {
-              setFeaturesSettings(prev => ({ ...prev, ...(value as unknown as Partial<FeaturesSettings>) }));
+              newFeatures = { ...newFeatures, ...(value as unknown as Partial<FeaturesSettings>) };
             } else if (item.key === 'cta_settings' && value && typeof value === 'object' && !Array.isArray(value)) {
-              setCtaSettings(prev => ({ ...prev, ...(value as unknown as Partial<CTASettings>) }));
+              newCTA = { ...newCTA, ...(value as unknown as Partial<CTASettings>) };
             } else if (item.key === 'site_name' && value) {
-              const siteName = typeof value === 'string' ? value : String(value);
-              setSiteSettings(prev => ({ ...prev, site_name: siteName }));
+              newSite.site_name = String(value);
             } else if (item.key === 'site_name_ar' && value) {
-              const siteNameAr = typeof value === 'string' ? value : String(value);
-              setSiteSettings(prev => ({ ...prev, site_name_ar: siteNameAr }));
+              newSite.site_name_ar = String(value);
             } else if (item.key === 'site_description' && value) {
-              const desc = typeof value === 'string' ? value : String(value);
-              setSiteSettings(prev => ({ ...prev, site_description: desc }));
+              newSite.site_description = String(value);
             }
           } catch (e) {
             console.warn('Error parsing setting:', item.key, e);
           }
         });
+
+        setSections(newSections);
+        setHeroSettings(newHero);
+        setSiteSettings(newSite);
+        setServicesSettings(newServices);
+        setPlatformsSettings(newPlatforms);
+        setFeaturesSettings(newFeatures);
+        setCtaSettings(newCTA);
+
+        // Save to cache
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          timestamp: Date.now(),
+          settings: {
+            sections: newSections,
+            heroSettings: newHero,
+            siteSettings: newSite,
+            servicesSettings: newServices,
+            platformsSettings: newPlatforms,
+            featuresSettings: newFeatures,
+            ctaSettings: newCTA
+          }
+        }));
       }
     } catch (error) {
       console.error('Error loading homepage settings:', error);

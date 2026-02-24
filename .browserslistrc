@@ -1,6 +1,5 @@
 # Target modern browsers only — removes ~13 KiB of unnecessary legacy JS polyfills
 # (Array.prototype.at, flat, flatMap, Object.fromEntries, Object.hasOwn, trimStart, trimEnd)
-[modern]
 last 2 Chrome versions
 last 2 Firefox versions
 last 2 Safari versions

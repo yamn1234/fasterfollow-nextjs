@@ -24,13 +24,12 @@ const Header = () => {
         <Link href="/" className="flex items-center gap-2 min-w-0">
           {headerSettings.logo_url ? (
             <Image
-              src={`${headerSettings.logo_url}?width=80&quality=80`}
+              src={headerSettings.logo_url}
               alt={headerSettings.logo_text}
               width={40}
               height={40}
               className="h-10 w-10 rounded-xl object-cover"
               priority
-              unoptimized={headerSettings.logo_url.startsWith('https://jljizjuzliucwcvzrtkr')}
             />
           ) : (
             <div className="flex h-10 w-10 items-center justify-center rounded-xl gradient-primary">

@@ -98,12 +98,30 @@ const defaultFooterSettings: FooterSettings = {
   show_payment_logos: true,
 };
 
+const CACHE_KEY = 'ff_site_settings';
+const CACHE_TTL = 3600000; // 1 hour
+
 export const useHeaderFooterSettings = () => {
   const [headerSettings, setHeaderSettings] = useState<HeaderSettings>(defaultHeaderSettings);
   const [footerSettings, setFooterSettings] = useState<FooterSettings>(defaultFooterSettings);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Try to load from cache first for immediate render
+    const cachedData = localStorage.getItem(CACHE_KEY);
+    if (cachedData) {
+      try {
+        const { header, footer, timestamp } = JSON.parse(cachedData);
+        if (Date.now() - timestamp < CACHE_TTL) {
+          setHeaderSettings(header);
+          setFooterSettings(footer);
+          setLoading(false);
+        }
+      } catch (e) {
+        console.warn('Failed to parse site settings cache', e);
+      }
+    }
+
     loadSettings();
   }, []);
 
@@ -115,6 +133,9 @@ export const useHeaderFooterSettings = () => {
         .in('key', ['header_settings', 'footer_settings']);
 
       if (data) {
+        let newHeader = { ...defaultHeaderSettings };
+        let newFooter = { ...defaultFooterSettings };
+
         data.forEach(item => {
           try {
             let value = item.value;
@@ -122,19 +143,29 @@ export const useHeaderFooterSettings = () => {
               try {
                 value = JSON.parse(value);
               } catch {
-                // استخدم القيمة كما هي
+                // use as is
               }
             }
 
             if (item.key === 'header_settings' && value && typeof value === 'object' && !Array.isArray(value)) {
-              setHeaderSettings(prev => ({ ...prev, ...(value as unknown as Partial<HeaderSettings>) }));
+              newHeader = { ...newHeader, ...(value as unknown as Partial<HeaderSettings>) };
             } else if (item.key === 'footer_settings' && value && typeof value === 'object' && !Array.isArray(value)) {
-              setFooterSettings(prev => ({ ...prev, ...(value as unknown as Partial<FooterSettings>) }));
+              newFooter = { ...newFooter, ...(value as unknown as Partial<FooterSettings>) };
             }
           } catch (e) {
             console.warn('Error parsing setting:', item.key, e);
           }
         });
+
+        setHeaderSettings(newHeader);
+        setFooterSettings(newFooter);
+
+        // Save to cache
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+          header: newHeader,
+          footer: newFooter,
+          timestamp: Date.now()
+        }));
       }
     } catch (error) {
       console.error('Error loading header/footer settings:', error);

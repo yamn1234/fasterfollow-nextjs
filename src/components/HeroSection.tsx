@@ -128,7 +128,7 @@ const HeroSection = ({ settings, siteSettings }: HeroSectionProps) => {
               alt={`${title} - ${isArabic ? 'زيادة متابعين السوشيال ميديا' : 'Social Media Growth'}`}
               width={512}
               height={512}
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+              sizes="(max-width: 640px) 320px, (max-width: 1024px) 448px, 512px"
               className="w-full max-w-xs sm:max-w-md lg:max-w-lg object-contain animate-float drop-shadow-2xl"
               priority
             />
