@@ -98,7 +98,39 @@ function generateServiceHTML(service: Service): string {
       "price": "${service.price}",
       "priceCurrency": "USD",
       "availability": "https://schema.org/InStock",
-      "url": "${canonicalUrl}"
+      "url": "${canonicalUrl}",
+      "shippingDetails": {
+        "@type": "OfferShippingDetails",
+        "shippingRate": {
+          "@type": "MonetaryAmount",
+          "value": "0",
+          "currency": "USD"
+        },
+        "shippingDestination": {
+          "@type": "DefinedRegion",
+          "addressCountry": "SA"
+        },
+        "deliveryTime": {
+          "@type": "ShippingDeliveryTime",
+          "handlingTime": {
+            "@type": "QuantitativeValue",
+            "minValue": 0,
+            "maxValue": 1,
+            "unitCode": "DAY"
+          },
+          "transitTime": {
+            "@type": "QuantitativeValue",
+            "minValue": 0,
+            "maxValue": 1,
+            "unitCode": "DAY"
+          }
+        }
+      },
+      "hasMerchantReturnPolicy": {
+        "@type": "MerchantReturnPolicy",
+        "applicableCountry": "SA",
+        "returnPolicyCategory": "https://schema.org/MerchantReturnNotPermitted"
+      }
     }
   }
   </script>
@@ -239,10 +271,10 @@ async function generateServicePages() {
       const html = generateServiceHTML(service as Service);
       const filePath = path.join(OUTPUT_DIR, `${service.slug}.html`);
       fs.writeFileSync(filePath, html, 'utf-8');
-      
+
       // Add redirect rule
       redirects.push(`/services/${service.slug} /services/${service.slug}.html 200`);
-      
+
       console.log(`✅ Generated: ${service.slug}.html`);
     } catch (err) {
       console.error(`❌ Error generating ${service.slug}:`, err);
@@ -252,7 +284,7 @@ async function generateServicePages() {
   // Update _redirects file
   const redirectsPath = path.resolve('./public/_redirects');
   let existingRedirects = '';
-  
+
   if (fs.existsSync(redirectsPath)) {
     existingRedirects = fs.readFileSync(redirectsPath, 'utf-8');
   }
@@ -260,10 +292,10 @@ async function generateServicePages() {
   // Remove old service redirects and add new ones
   const lines = existingRedirects.split('\n');
   const filteredLines = lines.filter(line => !line.match(/^\/services\/[^\s]+\s+\/services\/[^\s]+\.html\s+200$/));
-  
+
   // Find the position to insert service redirects (before SPA fallback)
   const spaFallbackIndex = filteredLines.findIndex(line => line.includes('/* /index.html'));
-  
+
   const newRedirects = [
     ...filteredLines.slice(0, spaFallbackIndex > 0 ? spaFallbackIndex : filteredLines.length),
     '',

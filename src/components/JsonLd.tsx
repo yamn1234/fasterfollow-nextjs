@@ -72,11 +72,11 @@ interface WebSiteSchema {
   };
 }
 
-type SchemaData = 
-  | OrganizationSchema 
-  | ProductSchema 
-  | ArticleSchema 
-  | BreadcrumbSchema 
+type SchemaData =
+  | OrganizationSchema
+  | ProductSchema
+  | ArticleSchema
+  | BreadcrumbSchema
   | FAQSchema
   | WebSiteSchema;
 
@@ -125,6 +125,38 @@ const buildSchema = (data: SchemaData): object => {
           priceCurrency: data.priceCurrency || 'USD',
           availability: `https://schema.org/${data.availability || 'InStock'}`,
           url: data.url,
+          shippingDetails: {
+            '@type': 'OfferShippingDetails',
+            shippingRate: {
+              '@type': 'MonetaryAmount',
+              value: '0',
+              currency: 'USD',
+            },
+            shippingDestination: {
+              '@type': 'DefinedRegion',
+              addressCountry: 'SA',
+            },
+            deliveryTime: {
+              '@type': 'ShippingDeliveryTime',
+              handlingTime: {
+                '@type': 'QuantitativeValue',
+                minValue: 0,
+                maxValue: 1,
+                unitCode: 'DAY',
+              },
+              transitTime: {
+                '@type': 'QuantitativeValue',
+                minValue: 0,
+                maxValue: 1,
+                unitCode: 'DAY',
+              },
+            },
+          },
+          hasMerchantReturnPolicy: {
+            '@type': 'MerchantReturnPolicy',
+            applicableCountry: 'SA',
+            returnPolicyCategory: 'https://schema.org/MerchantReturnNotPermitted',
+          },
         },
         ...(data.aggregateRating && {
           aggregateRating: {
