@@ -3,14 +3,15 @@ import { Metadata } from "next";
 import { supabase } from "@/integrations/supabase/client";
 import DynamicContentView from "@/views/DynamicContentView";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const decodedSlug = decodeURIComponent(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug: rawSlug } = await params;
+  const decodedSlug = decodeURIComponent(rawSlug);
 
   // 1. Try to find a page
   const { data: page } = await supabase
     .from('pages')
     .select('title, title_ar, seo_title, seo_description, seo_keywords, og_title, og_description, og_image, is_indexable, canonical_url')
-    .or(`slug.eq.${decodedSlug},slug.eq.${params.slug}`)
+    .or(`slug.eq.${decodedSlug},slug.eq.${rawSlug}`)
     .single();
 
   if (page) {
@@ -21,13 +22,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       keywords: page.seo_keywords || undefined,
       robots: page.is_indexable === false ? { index: false, follow: false } : { index: true, follow: true },
       alternates: {
-        canonical: page.canonical_url || `https://fasterfollow.net/${params.slug}`,
+        canonical: page.canonical_url || `https://fasterfollow.net/${rawSlug}`,
       },
       openGraph: {
         title: page.og_title || title,
         description: page.og_description || page.seo_description || '',
         images: page.og_image ? [page.og_image] : [],
-        url: `https://fasterfollow.net/${params.slug}`,
+        url: `https://fasterfollow.net/${rawSlug}`,
       },
     };
   }
@@ -36,7 +37,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   const { data: post } = await supabase
     .from('blog_posts')
     .select('title, title_ar, excerpt, seo_title, seo_description, seo_keywords, featured_image, og_title, og_description, og_image, is_indexable, canonical_url')
-    .or(`slug.eq.${decodedSlug},slug.eq.${params.slug}`)
+    .or(`slug.eq.${decodedSlug},slug.eq.${rawSlug}`)
     .single();
 
   if (post) {
@@ -50,13 +51,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
       keywords: post.seo_keywords || undefined,
       robots: post.is_indexable === false ? { index: false, follow: false } : { index: true, follow: true },
       alternates: {
-        canonical: post.canonical_url || `https://fasterfollow.net/${params.slug}`,
+        canonical: post.canonical_url || `https://fasterfollow.net/${rawSlug}`,
       },
       openGraph: {
         title: post.og_title || title,
         description: post.og_description || desc,
         images: image ? [image] : [],
-        url: `https://fasterfollow.net/${params.slug}`,
+        url: `https://fasterfollow.net/${rawSlug}`,
         type: "article",
       },
     };

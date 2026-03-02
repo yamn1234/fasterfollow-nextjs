@@ -3,12 +3,13 @@ import { Metadata } from "next";
 import { supabase } from "@/integrations/supabase/client";
 import ServiceDetail from "@/views/ServiceDetail";
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  const decodedSlug = decodeURIComponent(params.slug);
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug: rawSlug } = await params;
+  const decodedSlug = decodeURIComponent(rawSlug);
   const { data: service } = await supabase
     .from('services')
     .select('name_ar, name, description_ar, description, seo_title, seo_description, seo_keywords, og_title, og_description, og_image, image_url, is_indexable, canonical_url, slug')
-    .or(`slug.eq.${decodedSlug},slug.eq.${params.slug}`)
+    .or(`slug.eq.${decodedSlug},slug.eq.${rawSlug}`)
     .single();
 
   if (!service) {
@@ -27,13 +28,13 @@ export async function generateMetadata({ params }: { params: { slug: string } })
     keywords: service.seo_keywords ? service.seo_keywords : undefined,
     robots: service.is_indexable === false ? { index: false, follow: false } : { index: true, follow: true },
     alternates: {
-      canonical: service.canonical_url || `https://fasterfollow.net/services/${params.slug}`,
+      canonical: service.canonical_url || `https://fasterfollow.net/services/${rawSlug}`,
     },
     openGraph: {
       title: service.og_title || title,
       description: service.og_description || desc,
       images: image ? [image] : [],
-      url: `https://fasterfollow.net/services/${params.slug}`,
+      url: `https://fasterfollow.net/services/${rawSlug}`,
       type: "article",
     },
   };
