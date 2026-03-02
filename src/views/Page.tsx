@@ -98,7 +98,7 @@ const PageView = () => {
 
   const pageTitle = page.seo_title || page.title_ar || page.title;
   const pageDesc = page.seo_description || '';
-  const canonicalPath = page.canonical_url || `/page/${slug}`;
+  const canonicalPath = page.canonical_url || `/${slug}`;
 
   return (
     <div className="min-h-screen bg-background">

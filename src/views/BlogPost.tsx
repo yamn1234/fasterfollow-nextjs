@@ -136,7 +136,7 @@ const BlogPostPage = () => {
         title={pageTitle}
         description={pageDesc}
         keywords={post.seo_keywords || undefined}
-        canonicalUrl={`/blog/${slug}`}
+        canonicalUrl={`/${slug}`}
         ogImage={post.og_image || post.featured_image || undefined}
         ogType="article"
         articlePublishedTime={post.published_at || undefined}
@@ -150,7 +150,7 @@ const BlogPostPage = () => {
             items: [
               { name: 'الرئيسية', url: '/' },
               { name: 'المدونة', url: '/blog' },
-              { name: pageTitle, url: `/blog/${slug}` },
+              { name: pageTitle, url: `/${slug}` },
             ],
           },
         ]}

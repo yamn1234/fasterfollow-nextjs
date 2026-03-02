@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 import {
   Menu,
@@ -52,7 +53,7 @@ const AdminHeader = ({ onMenuToggle }: AdminHeaderProps) => {
 
   const handleLogout = async () => {
     await signOut();
-    router.push('/admin/login');
+    window.location.href = '/admin/login';
   };
 
   return (
@@ -170,13 +171,17 @@ const AdminHeader = ({ onMenuToggle }: AdminHeaderProps) => {
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>حسابي</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => router.push('/admin/profile')}>
-              <User className="w-4 h-4 ml-2" />
-              الملف الشخصي
+            <DropdownMenuItem asChild>
+              <Link href="/admin/profile" className="w-full cursor-pointer">
+                <User className="w-4 h-4 ml-2" />
+                الملف الشخصي
+              </Link>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => router.push('/admin/settings/general')}>
-              <Settings className="w-4 h-4 ml-2" />
-              الإعدادات
+            <DropdownMenuItem asChild>
+              <Link href="/admin/settings/general" className="w-full cursor-pointer">
+                <Settings className="w-4 h-4 ml-2" />
+                الإعدادات
+              </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:text-destructive">

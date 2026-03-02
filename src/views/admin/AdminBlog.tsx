@@ -462,7 +462,7 @@ const AdminBlog = ({ activeTab: initialTab = 'posts' }: AdminBlogProps) => {
                                 تعديل
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => window.open(`/blog/${post.slug}`, '_blank')}
+                                onClick={() => window.open(`/${post.slug}`, '_blank')}
                               >
                                 <Eye className="w-4 h-4 ml-2" />
                                 معاينة

@@ -430,7 +430,7 @@ const AdminContent = ({ activeTab: initialTab = 'pages' }: AdminContentProps) =>
                                 تعديل
                               </DropdownMenuItem>
                               <DropdownMenuItem
-                                onClick={() => window.open(`/page/${page.slug}`, '_blank')}
+                                onClick={() => window.open(`/${page.slug}`, '_blank')}
                               >
                                 <Eye className="w-4 h-4 ml-2" />
                                 معاينة

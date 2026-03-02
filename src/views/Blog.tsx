@@ -168,7 +168,7 @@ const Blog = () => {
                   />
                 )}
                 <CardHeader>
-                  <Link href={`/blog/${post.slug}`}>
+                  <Link href={`/${post.slug}`}>
                     <CardTitle className="text-lg hover:text-primary transition-colors line-clamp-2">
                       {post.title_ar || post.title}
                     </CardTitle>
@@ -197,7 +197,7 @@ const Blog = () => {
                       <Badge variant="secondary">{getCategoryName(post.category_id)}</Badge>
                     )}
                     <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/blog/${post.slug}`}>
+                      <Link href={`/${post.slug}`}>
                         اقرأ المزيد
                         <ArrowLeft className="w-3 h-3 mr-1" />
                       </Link>

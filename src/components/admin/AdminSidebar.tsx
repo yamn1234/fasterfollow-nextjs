@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
+import Link from 'next/link';
 
 import {
   LayoutDashboard,
@@ -59,14 +60,11 @@ const SidebarItem = ({
   onClick,
 }: SidebarItemProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const router = useRouter();
   const pathname = usePathname();
 
   const handleClick = () => {
     if (children) {
       setIsOpen(!isOpen);
-    } else if (path) {
-      router.push(path);
     } else if (onClick) {
       onClick();
     }
@@ -77,40 +75,61 @@ const SidebarItem = ({
 
   return (
     <div>
-      <button
-        onClick={handleClick}
-        className={cn(
-          'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-          'hover:bg-primary/10 hover:text-primary',
-          (isCurrentPath || hasActiveChild || isActive)
-            ? 'bg-primary/10 text-primary'
-            : 'text-muted-foreground'
-        )}
-      >
-        <Icon className="w-5 h-5 shrink-0" />
-        <span className="flex-1 text-start">{label}</span>
-        {badge !== undefined && badge > 0 && (
-          <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
-            {badge > 99 ? '99+' : badge}
-          </span>
-        )}
-        {children && (
-          <ChevronDown
-            className={cn(
-              'w-4 h-4 transition-transform duration-200',
-              isOpen && 'rotate-180'
-            )}
-          />
-        )}
-      </button>
+      {(!children && path) ? (
+        <Link
+          href={path}
+          className={cn(
+            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+            'hover:bg-primary/10 hover:text-primary',
+            (isCurrentPath || hasActiveChild || isActive)
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted-foreground'
+          )}
+        >
+          <Icon className="w-5 h-5 shrink-0" />
+          <span className="flex-1 text-start">{label}</span>
+          {badge !== undefined && badge > 0 && (
+            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
+        </Link>
+      ) : (
+        <button
+          onClick={handleClick}
+          className={cn(
+            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+            'hover:bg-primary/10 hover:text-primary',
+            (isCurrentPath || hasActiveChild || isActive)
+              ? 'bg-primary/10 text-primary'
+              : 'text-muted-foreground'
+          )}
+        >
+          <Icon className="w-5 h-5 shrink-0" />
+          <span className="flex-1 text-start">{label}</span>
+          {badge !== undefined && badge > 0 && (
+            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-destructive text-destructive-foreground">
+              {badge > 99 ? '99+' : badge}
+            </span>
+          )}
+          {children && (
+            <ChevronDown
+              className={cn(
+                'w-4 h-4 transition-transform duration-200',
+                isOpen && 'rotate-180'
+              )}
+            />
+          )}
+        </button>
+      )}
 
       {children && (
         <Collapsible open={isOpen} onOpenChange={setIsOpen}>
           <CollapsibleContent className="pr-4 mt-1 space-y-1">
             {children.map((child) => (
-              <button
+              <Link
                 key={child.path}
-                onClick={() => router.push(child.path)}
+                href={child.path}
                 className={cn(
                   'w-full flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors',
                   'hover:bg-primary/5 hover:text-primary',
@@ -121,7 +140,7 @@ const SidebarItem = ({
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-current" />
                 {child.label}
-              </button>
+              </Link>
             ))}
           </CollapsibleContent>
         </Collapsible>
@@ -136,7 +155,6 @@ interface AdminSidebarProps {
 }
 
 const AdminSidebar = ({ isOpen, onToggle }: AdminSidebarProps) => {
-  const router = useRouter();
   const { signOut } = useAuth();
   const { t } = useLanguage();
 
@@ -245,7 +263,7 @@ const AdminSidebar = ({ isOpen, onToggle }: AdminSidebarProps) => {
 
   const handleLogout = async () => {
     await signOut();
-    router.push('/admin/login');
+    window.location.href = '/admin/login';
   };
 
   return (

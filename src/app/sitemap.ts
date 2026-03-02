@@ -47,6 +47,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             .eq('is_archived', false)
             .eq('is_indexable', true);
 
+        // Fetch all published and indexable custom pages
+        const { data: customPages } = await supabase
+            .from('pages')
+            .select('slug, updated_at')
+            .eq('is_published', true)
+            .eq('is_archived', false)
+            .eq('is_indexable', true);
+
         const dynamicRoutes = (services || []).map((service) => ({
             url: `${baseUrl}/services/${service.slug}`,
             lastModified: service.updated_at ? new Date(service.updated_at) : new Date(),
@@ -61,7 +69,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
             priority: 0.8,
         }));
 
-        return [...staticRoutes, ...dynamicRoutes, ...dynamicBlogRoutes];
+        const dynamicPagesRoutes = (customPages || []).map((page) => ({
+            url: `${baseUrl}/${page.slug}`,
+            lastModified: page.updated_at ? new Date(page.updated_at) : new Date(),
+            changeFrequency: 'monthly' as const,
+            priority: 0.7,
+        }));
+
+        return [...staticRoutes, ...dynamicRoutes, ...dynamicBlogRoutes, ...dynamicPagesRoutes];
     } catch (error) {
         console.error('Error generating sitemap:', error);
         // If Supabase fetch fails, at least return static routes
