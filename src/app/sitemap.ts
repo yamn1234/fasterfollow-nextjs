@@ -63,7 +63,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         }));
 
         const dynamicBlogRoutes = (posts || []).map((post) => ({
-            url: `${baseUrl}/blog/${post.slug}`,
+            url: `${baseUrl}/${post.slug}`,
             lastModified: post.updated_at ? new Date(post.updated_at) : new Date(),
             changeFrequency: 'weekly' as const,
             priority: 0.8,
