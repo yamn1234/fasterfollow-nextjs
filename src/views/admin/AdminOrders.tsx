@@ -111,10 +111,10 @@ const AdminOrders = () => {
         },
         async (payload) => {
           console.log('Order change detected:', payload);
-          
+
           if (payload.eventType === 'UPDATE') {
             const updatedOrder = payload.new as Order;
-            
+
             // Get service and profile details for the updated order
             const { data: serviceData } = await supabase
               .from('services')
@@ -128,8 +128,8 @@ const AdminOrders = () => {
               .eq('user_id', updatedOrder.user_id)
               .maybeSingle();
 
-            setOrders(prev => prev.map(order => 
-              order.id === updatedOrder.id 
+            setOrders(prev => prev.map(order =>
+              order.id === updatedOrder.id
                 ? { ...updatedOrder, services: serviceData, profiles: profileData }
                 : order
             ));
@@ -147,6 +147,19 @@ const AdminOrders = () => {
     return () => {
       supabase.removeChannel(channel);
     };
+  }, []);
+
+  // background status polling
+  useEffect(() => {
+    // Initial sync on load
+    handleSyncAllStatuses(true);
+
+    // Set up polling every 5 minutes
+    const intervalId = setInterval(() => {
+      handleSyncAllStatuses(true);
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(intervalId);
   }, []);
 
   const fetchOrders = async () => {
@@ -308,8 +321,8 @@ const AdminOrders = () => {
     }
   };
 
-  const handleSyncAllStatuses = async () => {
-    setSyncing(true);
+  const handleSyncAllStatuses = async (silent = false) => {
+    if (!silent) setSyncing(true);
     try {
       const response = await supabase.functions.invoke('smm-check-order-status', {
         body: { checkAll: true },
@@ -319,22 +332,26 @@ const AdminOrders = () => {
 
       const result = response.data;
       if (result.success) {
-        toast({
-          title: 'تم بنجاح',
-          description: result.message,
-        });
+        if (!silent) {
+          toast({
+            title: 'تم بنجاح',
+            description: result.message,
+          });
+        }
         fetchOrders();
       } else {
         throw new Error(result.error);
       }
     } catch (error: any) {
-      toast({
-        title: 'خطأ',
-        description: error.message || 'حدث خطأ في مزامنة الحالات',
-        variant: 'destructive',
-      });
+      if (!silent) {
+        toast({
+          title: 'خطأ',
+          description: error.message || 'حدث خطأ في مزامنة الحالات',
+          variant: 'destructive',
+        });
+      }
     } finally {
-      setSyncing(false);
+      if (!silent) setSyncing(false);
     }
   };
 
@@ -373,9 +390,9 @@ const AdminOrders = () => {
             <RefreshCw className="w-4 h-4 ml-2" />
             تحديث
           </Button>
-          <Button 
-            variant="outline" 
-            onClick={handleSyncAllStatuses}
+          <Button
+            variant="outline"
+            onClick={() => handleSyncAllStatuses(false)}
             disabled={syncing}
           >
             {syncing ? (
