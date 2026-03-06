@@ -397,8 +397,8 @@ const ServiceDetail = ({ initialService }: ServiceDetailProps) => {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content - order-2 on mobile so sidebar shows first */}
-          <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
+          {/* Main Content - Service info (header, desc, features) */}
+          <div className="lg:col-span-2 space-y-6">
             {/* Service Header */}
             <Card>
               <CardContent className="p-6">
@@ -505,114 +505,10 @@ const ServiceDetail = ({ initialService }: ServiceDetailProps) => {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Reviews Section - order-last on mobile, stays in place on desktop */}
-            <Card className="order-last lg:order-none">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Star className="w-5 h-5 text-yellow-400" />
-                  <h2 className="text-xl font-bold">تقييمات العملاء</h2>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {/* Rating Summary */}
-                <div className="flex flex-col md:flex-row gap-8 mb-8 pb-8 border-b">
-                  <div className="text-center">
-                    <p className="text-5xl font-bold">{service.average_rating || 0}</p>
-                    <div className="flex justify-center my-2">
-                      {renderStars(Math.round(service.average_rating || 0))}
-                    </div>
-                    <p className="text-sm text-muted-foreground">
-                      من {service.reviews_count || 0} تقييم
-                    </p>
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    {ratingDistribution.map((item) => (
-                      <div key={item.stars} className="flex items-center gap-2">
-                        <span className="text-sm w-8">{item.stars} ⭐</span>
-                        <Progress value={item.percentage} className="flex-1 h-2" />
-                        <span className="text-sm text-muted-foreground w-12">
-                          {item.percentage}%
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Reviews List */}
-                {reviews.length > 0 ? (
-                  <div className="space-y-6">
-                    {reviews.map((review) => (
-                      <div key={review.id} className="border-b pb-6 last:border-0 last:pb-0">
-                        <div className="flex items-start gap-3">
-                          <Avatar>
-                            <AvatarFallback>
-                              {review.user?.full_name?.[0] || 'م'}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between">
-                              <p className="font-medium">
-                                {review.user?.full_name || 'مستخدم'}
-                              </p>
-                              <span className="text-xs text-muted-foreground">
-                                {new Date(review.created_at).toLocaleDateString('ar-SA')}
-                              </span>
-                            </div>
-                            <div className="flex my-1">{renderStars(review.rating)}</div>
-                            {review.comment && (
-                              <p className="text-muted-foreground mt-2">{review.comment}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                    <p>لا توجد تقييمات حتى الآن</p>
-                    <p className="text-sm">كن أول من يقيم هذه الخدمة!</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Related Services */}
-            {relatedServices.length > 0 && (
-              <div className="space-y-4">
-                <h2 className="text-2xl font-bold flex items-center gap-2">
-                  <Zap className="w-6 h-6 text-primary" />
-                  خدمات قد تعجبك
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {relatedServices.map((rel) => (
-                    <Link key={rel.id} href={`/services/${rel.slug}`}>
-                      <Card className="hover:border-primary/50 transition-colors h-full">
-                        <CardContent className="p-4 flex gap-4 items-center">
-                          {rel.image_url && (
-                            <img
-                              src={rel.image_url}
-                              alt={rel.name_ar || rel.name}
-                              className="w-16 h-16 rounded-lg object-cover bg-secondary h-full"
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-sm truncate">{rel.name_ar || rel.name}</h3>
-                            <p className="text-primary font-bold">${rel.price.toFixed(2)}</p>
-                          </div>
-                          <ArrowRight className="w-4 h-4 text-muted-foreground rotate-180" />
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Sidebar - Order Card - order-1 on mobile (shows first) */}
-          <div className="lg:col-span-1 order-1 lg:order-2">
+          {/* Sidebar - Order Form (shows after features on mobile, beside them on desktop) */}
+          <div className="lg:col-span-1">
             <Card className="sticky top-24">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -702,6 +598,109 @@ const ServiceDetail = ({ initialService }: ServiceDetailProps) => {
                 </Button>
               </CardContent>
             </Card>
+          </div>
+
+          {/* Reviews + Related Services - full width row below everything */}
+          <div className="lg:col-span-3 space-y-6">
+            {/* Reviews Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="w-5 h-5 text-yellow-400" />
+                  <h2 className="text-xl font-bold">تقييمات العملاء</h2>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {/* Rating Summary */}
+                <div className="flex flex-col md:flex-row gap-8 mb-8 pb-8 border-b">
+                  <div className="text-center">
+                    <p className="text-5xl font-bold">{service.average_rating || 0}</p>
+                    <div className="flex justify-center my-2">
+                      {renderStars(Math.round(service.average_rating || 0))}
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      من {service.reviews_count || 0} تقييم
+                    </p>
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    {ratingDistribution.map((item) => (
+                      <div key={item.stars} className="flex items-center gap-2">
+                        <span className="text-sm w-8">{item.stars} ⭐</span>
+                        <Progress value={item.percentage} className="flex-1 h-2" />
+                        <span className="text-sm text-muted-foreground w-12">
+                          {item.percentage}%
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Reviews List */}
+                {reviews.length > 0 ? (
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {reviews.map((review) => (
+                      <div key={review.id} className="border-b md:border pb-6 md:p-4 md:rounded-lg last:border-0 last:pb-0">
+                        <div className="flex items-start gap-3">
+                          <Avatar>
+                            <AvatarFallback>{review.user?.full_name?.[0] || 'م'}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <p className="font-medium">{review.user?.full_name || 'مستخدم'}</p>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(review.created_at).toLocaleDateString('ar-SA')}
+                              </span>
+                            </div>
+                            <div className="flex my-1">{renderStars(review.rating)}</div>
+                            {review.comment && (
+                              <p className="text-muted-foreground mt-2">{review.comment}</p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                    <p>لا توجد تقييمات حتى الآن</p>
+                    <p className="text-sm">كن أول من يقيم هذه الخدمة!</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Related Services */}
+            {relatedServices.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Zap className="w-6 h-6 text-primary" />
+                  خدمات قد تعجبك
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {relatedServices.map((rel) => (
+                    <Link key={rel.id} href={`/services/${rel.slug}`}>
+                      <Card className="hover:border-primary/50 transition-colors h-full">
+                        <CardContent className="p-4 flex gap-4 items-center">
+                          {rel.image_url && (
+                            <img
+                              src={rel.image_url}
+                              alt={rel.name_ar || rel.name}
+                              className="w-16 h-16 rounded-lg object-cover bg-secondary"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-sm truncate">{rel.name_ar || rel.name}</h3>
+                            <p className="text-primary font-bold">${rel.price.toFixed(2)}</p>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-muted-foreground rotate-180" />
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main >
