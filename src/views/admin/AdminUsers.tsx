@@ -60,15 +60,15 @@ import { ar } from 'date-fns/locale';
 interface User {
   id: string;
   user_id: string;
-  full_name: string | null;
+  full_name: string;
+  avatar_url: string;
   balance: number;
-  avatar_url: string | null;
-  created_at: string;
-  email?: string;
-  role?: string;
   is_suspended: boolean;
-  suspended_at: string | null;
-  suspension_reason: string | null;
+  suspension_reason: string;
+  suspended_at: string;
+  created_at: string;
+  role: 'admin' | 'moderator' | 'support' | 'user';
+  email?: string;
 }
 
 const AdminUsers = () => {
@@ -83,6 +83,8 @@ const AdminUsers = () => {
   const [balanceAction, setBalanceAction] = useState<'add' | 'subtract'>('add');
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [suspensionReason, setSuspensionReason] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   useEffect(() => {
     fetchUsers();
@@ -134,9 +136,9 @@ const AdminUsers = () => {
           });
           const withEmails = usersWithRoles.map(u => ({
             ...u,
-            email: emailMap[u.user_id] || u.email || undefined,
+            email: emailMap[u.user_id] || (u as any).email || undefined,
           }));
-          setUsers(withEmails);
+          setUsers(withEmails as User[]);
           return;
         }
       } catch {
@@ -208,6 +210,14 @@ const AdminUsers = () => {
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     return matchesSearch && matchesRole;
   });
+
+  const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE);
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter]);
 
   const roleColors: Record<string, string> = {
     admin: 'bg-primary/10 text-primary',
@@ -359,18 +369,18 @@ const AdminUsers = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10">
+                    <TableCell colSpan={7} className="text-center py-10">
                       جاري التحميل...
                     </TableCell>
                   </TableRow>
-                ) : filteredUsers.length === 0 ? (
+                ) : paginatedUsers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-10">
+                    <TableCell colSpan={7} className="text-center py-10">
                       لا توجد نتائج
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredUsers.map((user) => (
+                  paginatedUsers.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -476,22 +486,34 @@ const AdminUsers = () => {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between p-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              عرض {filteredUsers.length} من {users.length} مستخدم
-            </p>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" disabled>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="sm">
-                1
-              </Button>
-              <Button variant="outline" size="icon" disabled>
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between p-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                عرض {paginatedUsers.length} من {filteredUsers.length} مستخدم
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  السابق
+                </Button>
+                <span className="text-sm font-medium">
+                  صفحة {currentPage} من {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  التالي
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

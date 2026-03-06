@@ -87,6 +87,8 @@ const AdminOrders = () => {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [placingOrder, setPlacingOrder] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 50;
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -386,6 +388,13 @@ const AdminOrders = () => {
     return matchesSearch && matchesStatus;
   });
 
+  const totalPages = Math.ceil(filteredOrders.length / PAGE_SIZE);
+  const paginatedOrders = filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, statusFilter]);
+
   const statusConfig: Record<OrderStatus, { label: string; color: string; icon: React.ElementType }> = {
     pending: { label: 'معلق', color: 'bg-yellow-500/10 text-yellow-500', icon: Clock },
     processing: { label: 'قيد المعالجة', color: 'bg-blue-500/10 text-blue-500', icon: Loader2 },
@@ -499,14 +508,14 @@ const AdminOrders = () => {
                       <Loader2 className="w-6 h-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
-                ) : filteredOrders.length === 0 ? (
+                ) : paginatedOrders.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-10">
                       لا توجد طلبات
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredOrders.map((order) => {
+                  paginatedOrders.map((order) => {
                     const status = statusConfig[order.status];
                     const StatusIcon = status.icon;
                     const customerName = (order as any).profiles?.full_name || 'غير محدد';
@@ -628,20 +637,34 @@ const AdminOrders = () => {
           </div>
 
           {/* Pagination */}
-          <div className="flex items-center justify-between p-4 border-t">
-            <p className="text-sm text-muted-foreground">
-              عرض {filteredOrders.length} من {orders.length} طلب
-            </p>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="icon" disabled>
-                <ChevronRight className="w-4 h-4" />
-              </Button>
-              <Button variant="outline" size="sm">1</Button>
-              <Button variant="outline" size="icon" disabled>
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between p-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                عرض {paginatedOrders.length} من {filteredOrders.length} طلب
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  السابق
+                </Button>
+                <span className="text-sm font-medium">
+                  صفحة {currentPage} من {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  التالي
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 

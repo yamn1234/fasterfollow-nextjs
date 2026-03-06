@@ -139,6 +139,8 @@ const AdminServices = () => {
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   // Multi-select state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -533,7 +535,18 @@ const AdminServices = () => {
     return matchesSearch && matchesCategory;
   }), [services, searchQuery, categoryFilter]);
 
+  const totalPages = Math.ceil(filteredServices.length / PAGE_SIZE);
+  const paginatedServices = useMemo(() => {
+    const startIndex = (currentPage - 1) * PAGE_SIZE;
+    return filteredServices.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [filteredServices, currentPage]);
+
   const providerCategories = useMemo(() => [...new Set(providerServices.map(s => s.category))].sort(), [providerServices]);
+
+  // Reset page to 1 when search or filter changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, categoryFilter]);
 
   const filteredProviderServices = useMemo(() => providerServices.filter((service) => {
     const matchesSearch =
@@ -680,19 +693,19 @@ const AdminServices = () => {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-10">
-                      جاري التحميل...
+                    <TableCell colSpan={9} className="text-center py-10">
+                      <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                     </TableCell>
                   </TableRow>
-                ) : filteredServices.length === 0 ? (
+                ) : paginatedServices.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center py-10">
+                    <TableCell colSpan={9} className="text-center py-10">
                       لا توجد خدمات
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredServices.map((service) => (
-                    <TableRow key={service.id} className={selectedIds.has(service.id) ? 'bg-primary/5' : ''}>
+                  paginatedServices.map((service) => (
+                    <TableRow key={service.id} className={service.is_archived ? "opacity-60" : ""}>
                       <TableCell>
                         <Checkbox
                           checked={selectedIds.has(service.id)}
@@ -794,6 +807,36 @@ const AdminServices = () => {
               </TableBody>
             </Table>
           </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between p-4 border-t">
+              <span className="text-sm text-muted-foreground">
+                عرض {paginatedServices.length} من {filteredServices.length} خدمة
+              </span>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                >
+                  السابق
+                </Button>
+                <span className="text-sm font-medium">
+                  صفحة {currentPage} من {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                >
+                  التالي
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
