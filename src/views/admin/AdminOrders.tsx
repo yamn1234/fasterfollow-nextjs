@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   Search,
   Filter,
@@ -149,17 +149,21 @@ const AdminOrders = () => {
     };
   }, []);
 
-  // background status polling
+  // background status polling - delay initial sync by 10 seconds to avoid UI freeze on mount
   useEffect(() => {
-    // Initial sync on load
-    handleSyncAllStatuses(true);
+    const initialTimeout = setTimeout(() => {
+      handleSyncAllStatuses(true);
+    }, 10000);
 
     // Set up polling every 5 minutes
     const intervalId = setInterval(() => {
       handleSyncAllStatuses(true);
     }, 5 * 60 * 1000);
 
-    return () => clearInterval(intervalId);
+    return () => {
+      clearTimeout(initialTimeout);
+      clearInterval(intervalId);
+    };
   }, []);
 
   const fetchOrders = async () => {

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Search,
   Plus,
@@ -654,23 +654,23 @@ const AdminServices = () => {
     setServiceDialogOpen(true);
   };
 
-  const filteredServices = services.filter((service) => {
+  const filteredServices = useMemo(() => services.filter((service) => {
     const matchesSearch =
       service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       service.slug.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = categoryFilter === 'all' || service.category_id === categoryFilter;
     return matchesSearch && matchesCategory;
-  });
+  }), [services, searchQuery, categoryFilter]);
 
-  const providerCategories = [...new Set(providerServices.map(s => s.category))].sort();
+  const providerCategories = useMemo(() => [...new Set(providerServices.map(s => s.category))].sort(), [providerServices]);
 
-  const filteredProviderServices = providerServices.filter((service) => {
+  const filteredProviderServices = useMemo(() => providerServices.filter((service) => {
     const matchesSearch =
       service.name.toLowerCase().includes(importSearchQuery.toLowerCase()) ||
       service.id.includes(importSearchQuery);
     const matchesCategory = importCategoryFilter === 'all' || service.category === importCategoryFilter;
     return matchesSearch && matchesCategory;
-  });
+  }), [providerServices, importSearchQuery, importCategoryFilter]);
 
   return (
     <div className="space-y-6">
