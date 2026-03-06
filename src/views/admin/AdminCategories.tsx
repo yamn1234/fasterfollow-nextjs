@@ -122,19 +122,24 @@ const AdminCategories = () => {
           .eq('id', selectedCategory.id);
 
         if (error) throw error;
+        // Optimistic update
+        setCategories(prev => prev.map(c => c.id === selectedCategory.id ? { ...c, ...categoryData } : c));
         toast({ title: 'تم بنجاح', description: 'تم تحديث القسم' });
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('service_categories')
-          .insert(categoryData);
+          .insert(categoryData)
+          .select()
+          .maybeSingle();
 
         if (error) throw error;
+        if (data) setCategories(prev => [...prev, data]);
         toast({ title: 'تم بنجاح', description: 'تم إضافة القسم' });
       }
 
       setDialogOpen(false);
       resetForm();
-      fetchCategories();
+      setTimeout(() => fetchCategories(), 1500);
     } catch (error: any) {
       toast({
         title: 'خطأ',
@@ -181,7 +186,8 @@ const AdminCategories = () => {
         .eq('id', category.id);
 
       if (error) throw error;
-      fetchCategories();
+      // Optimistic update
+      setCategories(prev => prev.map(c => c.id === category.id ? { ...c, is_active: !c.is_active } : c));
     } catch (error) {
       toast({
         title: 'خطأ',
@@ -384,13 +390,7 @@ const AdminCategories = () => {
                 <Label>الاسم (إنجليزي)</Label>
                 <Input
                   value={formData.name}
-                  onChange={(e) => {
-                    setFormData({
-                      ...formData,
-                      name: e.target.value,
-                      slug: generateSlug(e.target.value),
-                    });
-                  }}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value, slug: generateSlug(e.target.value) }))}
                   placeholder="Category Name"
                 />
               </div>
@@ -398,7 +398,7 @@ const AdminCategories = () => {
                 <Label>الاسم (عربي)</Label>
                 <Input
                   value={formData.name_ar}
-                  onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name_ar: e.target.value }))}
                   placeholder="اسم القسم"
                 />
               </div>
@@ -407,7 +407,7 @@ const AdminCategories = () => {
               <Label>الرابط (Slug)</Label>
               <Input
                 value={formData.slug}
-                onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                onChange={(e) => setFormData(prev => ({ ...prev, slug: e.target.value }))}
                 placeholder="category-name"
                 dir="ltr"
               />
@@ -417,9 +417,9 @@ const AdminCategories = () => {
               value={formData.icon || formData.image_url}
               onChange={(value) => {
                 if (value && !value.startsWith('http') && value.length <= 4) {
-                  setFormData({ ...formData, icon: value, image_url: '' });
+                  setFormData(prev => ({ ...prev, icon: value, image_url: '' }));
                 } else {
-                  setFormData({ ...formData, image_url: value, icon: '' });
+                  setFormData(prev => ({ ...prev, image_url: value, icon: '' }));
                 }
               }}
               folder="categories"
@@ -429,7 +429,7 @@ const AdminCategories = () => {
                 <Label>الوصف (إنجليزي)</Label>
                 <Textarea
                   value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   rows={3}
                 />
               </div>
@@ -437,7 +437,7 @@ const AdminCategories = () => {
                 <Label>الوصف (عربي)</Label>
                 <Textarea
                   value={formData.description_ar}
-                  onChange={(e) => setFormData({ ...formData, description_ar: e.target.value })}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description_ar: e.target.value }))}
                   rows={3}
                 />
               </div>
@@ -446,7 +446,7 @@ const AdminCategories = () => {
               <Label>نشط</Label>
               <Switch
                 checked={formData.is_active}
-                onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                onCheckedChange={(checked) => setFormData(prev => ({ ...prev, is_active: checked }))}
               />
             </div>
           </div>

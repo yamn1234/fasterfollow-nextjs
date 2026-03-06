@@ -189,7 +189,8 @@ const AdminUsers = () => {
 
       setBalanceDialogOpen(false);
       setBalanceAmount('');
-      fetchUsers();
+      // Optimistic update
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, balance: newBalance } : u));
     } catch (error) {
       toast({
         title: 'خطأ',
@@ -244,7 +245,11 @@ const AdminUsers = () => {
 
       setSuspendDialogOpen(false);
       setSuspensionReason('');
-      fetchUsers();
+      // Optimistic update
+      setUsers(prev => prev.map(u => u.id === selectedUser.id
+        ? { ...u, is_suspended: true, suspended_at: new Date().toISOString(), suspension_reason: suspensionReason || 'تم تعليق الحساب بواسطة المدير' }
+        : u
+      ));
     } catch (error) {
       toast({
         title: 'خطأ',
@@ -272,7 +277,11 @@ const AdminUsers = () => {
         description: 'تم إلغاء تعليق الحساب بنجاح',
       });
 
-      fetchUsers();
+      // Optimistic update
+      setUsers(prev => prev.map(u => u.id === user.id
+        ? { ...u, is_suspended: false, suspended_at: null, suspension_reason: null }
+        : u
+      ));
     } catch (error) {
       toast({
         title: 'خطأ',
