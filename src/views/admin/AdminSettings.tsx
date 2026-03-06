@@ -271,18 +271,17 @@ const AdminSettings = ({ activeTab: initialTab = 'general' }: AdminSettingsProps
         { key: 'footer_settings', value: footerSettings, group_name: 'layout' },
       ];
 
-      for (const setting of settingsToSave) {
-        await supabase
-          .from('site_settings')
-          .upsert(
-            {
-              key: setting.key,
-              value: setting.value as any,
-              group_name: setting.group_name
-            },
-            { onConflict: 'key' }
-          );
-      }
+      // Batch all upserts into a single call instead of 20+ sequential awaits
+      await supabase
+        .from('site_settings')
+        .upsert(
+          settingsToSave.map(s => ({
+            key: s.key,
+            value: typeof s.value === 'object' ? JSON.stringify(s.value) : String(s.value ?? ''),
+            group_name: s.group_name,
+          })),
+          { onConflict: 'key' }
+        );
 
       toast({
         title: 'تم الحفظ',

@@ -69,7 +69,8 @@ export const useAdminAuth = () => {
     if (!authLoading) {
       checkAdminStatus();
     }
-  }, [user, authLoading, checkAdminStatus]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading]);
 
   const hasPermission = useCallback((permission: string) => {
     return state.isAdmin || state.permissions.includes(permission);
