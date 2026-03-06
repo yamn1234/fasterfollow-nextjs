@@ -397,8 +397,8 @@ const ServiceDetail = ({ initialService }: ServiceDetailProps) => {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
+          {/* Main Content - order-2 on mobile so sidebar shows first */}
+          <div className="lg:col-span-2 space-y-6 order-2 lg:order-1">
             {/* Service Header */}
             <Card>
               <CardContent className="p-6">
@@ -506,8 +506,8 @@ const ServiceDetail = ({ initialService }: ServiceDetailProps) => {
               </CardContent>
             </Card>
 
-            {/* Reviews Section */}
-            <Card>
+            {/* Reviews Section - order-last on mobile, stays in place on desktop */}
+            <Card className="order-last lg:order-none">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Star className="w-5 h-5 text-yellow-400" />
@@ -611,8 +611,8 @@ const ServiceDetail = ({ initialService }: ServiceDetailProps) => {
             )}
           </div>
 
-          {/* Sidebar - Order Card */}
-          <div className="lg:col-span-1">
+          {/* Sidebar - Order Card - order-1 on mobile (shows first) */}
+          <div className="lg:col-span-1 order-1 lg:order-2">
             <Card className="sticky top-24">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
