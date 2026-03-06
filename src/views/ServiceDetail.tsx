@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Loader2,
   Send,
+  ArrowRight,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -55,6 +56,8 @@ interface ServiceDetail {
   icon: string | null;
   image_url: string | null;
   requires_comments: boolean | null;
+  category_id: string | null;
+  slug: string;
   // SEO fields
   seo_title: string | null;
   seo_description: string | null;
@@ -68,6 +71,15 @@ interface ServiceDetail {
   } | null;
 }
 
+interface RelatedService {
+  id: string;
+  name: string;
+  name_ar: string | null;
+  slug: string;
+  price: number;
+  image_url: string | null;
+}
+
 interface Review {
   id: string;
   rating: number;
@@ -78,14 +90,19 @@ interface Review {
   } | null;
 }
 
-const ServiceDetail = () => {
+interface ServiceDetailProps {
+  initialService?: ServiceDetail | null;
+}
+
+const ServiceDetail = ({ initialService }: ServiceDetailProps) => {
   const { slug } = useParams();
   const router = useRouter();
   const { user, profile } = useAuth();
   const { toast } = useToast();
 
-  const [service, setService] = useState<ServiceDetail | null>(null);
+  const [service, setService] = useState<ServiceDetail | null>(initialService || null);
   const [reviews, setReviews] = useState<Review[]>([]);
+  const [relatedServices, setRelatedServices] = useState<RelatedService[]>([]);
   const [loading, setLoading] = useState(true);
   const [orderLink, setOrderLink] = useState('');
   const [orderQuantity, setOrderQuantity] = useState(100);
@@ -95,13 +112,18 @@ const ServiceDetail = () => {
 
   useEffect(() => {
     if (slug) {
-      fetchServiceDetails();
+      if (!service || service.slug !== slug) {
+        fetchServiceDetails();
+      } else {
+        // Even if we have initial service, we might want to fetch reviews
+        fetchServiceDetails(true);
+      }
     }
   }, [slug]);
 
-  const fetchServiceDetails = async () => {
+  const fetchServiceDetails = async (onlyReviews = false) => {
     try {
-      setLoading(true);
+      if (!onlyReviews) setLoading(true);
 
       // Fetch service with SEO fields
       const { data: serviceData, error: serviceError } = await supabase
@@ -109,28 +131,48 @@ const ServiceDetail = () => {
         .select(`
           id, name, name_ar, description, description_ar, price,
           min_quantity, max_quantity, average_rating, reviews_count, delivery_time,
-          icon, image_url, requires_comments,
+          icon, image_url, requires_comments, category_id, slug,
           seo_title, seo_description, seo_keywords, og_title, og_description, og_image,
           service_categories(name, name_ar)
         `)
-        .eq('slug', slug)
+        .eq('slug', slug as string)
         .eq('is_active', true)
         .maybeSingle();
 
-      if (serviceError) throw serviceError;
+      if (!onlyReviews) {
+        if (serviceError) throw serviceError;
 
-      if (!serviceData) {
-        router.push('/services');
-        return;
+        if (!serviceData) {
+          router.push('/services');
+          return;
+        }
+
+        const serviceWithSeo: ServiceDetail = {
+          ...serviceData,
+          requires_comments: serviceData.requires_comments,
+          category: serviceData.service_categories as any,
+          category_id: serviceData.category_id,
+          slug: serviceData.slug,
+        };
+        setService(serviceWithSeo);
+        setOrderQuantity(serviceData.min_quantity || 100);
+
+        // Fetch related services
+        if (serviceData.category_id) {
+          const { data: relatedData } = await supabase
+            .from('services')
+            .select('id, name, name_ar, slug, price, image_url')
+            .eq('category_id', serviceData.category_id)
+            .eq('is_active', true)
+            .neq('id', serviceData.id)
+            .limit(4);
+
+          if (relatedData) setRelatedServices(relatedData);
+        }
       }
 
-      const serviceWithSeo = {
-        ...serviceData,
-        requires_comments: serviceData.requires_comments,
-        category: serviceData.service_categories,
-      };
-      setService(serviceWithSeo);
-      setOrderQuantity(serviceData.min_quantity || 100);
+      const activeServiceId = onlyReviews ? service?.id : serviceData?.id;
+      if (!activeServiceId) return;
 
       // Fetch approved reviews
       const { data: reviewsData } = await supabase
@@ -139,7 +181,7 @@ const ServiceDetail = () => {
           id, rating, comment, created_at,
           profiles!reviews_user_id_fkey(full_name)
         `)
-        .eq('service_id', serviceData.id)
+        .eq('service_id', activeServiceId)
         .eq('is_approved', true)
         .order('created_at', { ascending: false })
         .limit(10);
@@ -261,9 +303,8 @@ const ServiceDetail = () => {
     return [...Array(5)].map((_, i) => (
       <Star
         key={i}
-        className={`w-4 h-4 ${
-          i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'
-        }`}
+        className={`w-4 h-4 ${i < rating ? 'fill-yellow-400 text-yellow-400' : 'text-muted-foreground'
+          }`}
       />
     ));
   };
@@ -282,7 +323,7 @@ const ServiceDetail = () => {
     { stars: 1, percentage: 1 },
   ];
 
-  if (loading) {
+  if (loading && !service) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -365,14 +406,14 @@ const ServiceDetail = () => {
                   {/* Service Image */}
                   {service.image_url && (
                     <div className="w-full sm:w-48 h-48 rounded-xl overflow-hidden bg-secondary shrink-0">
-                      <img 
-                        src={service.image_url} 
+                      <img
+                        src={service.image_url}
                         alt={service.name_ar || service.name}
                         className="w-full h-full object-cover"
                       />
                     </div>
                   )}
-                  
+
                   <div className="flex-1 flex flex-wrap items-start justify-between gap-4">
                     <div className="flex-1">
                       {service.category && (
@@ -412,8 +453,8 @@ const ServiceDetail = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <MessageSquare className="w-5 h-5" />
-                  وصف الخدمة
+                  <MessageSquare className="w-5 h-5 text-primary" />
+                  <h2 className="text-xl font-bold">وصف الخدمة</h2>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -469,8 +510,8 @@ const ServiceDetail = () => {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Star className="w-5 h-5" />
-                  تقييمات العملاء
+                  <Star className="w-5 h-5 text-yellow-400" />
+                  <h2 className="text-xl font-bold">تقييمات العملاء</h2>
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -536,6 +577,38 @@ const ServiceDetail = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Related Services */}
+            {relatedServices.length > 0 && (
+              <div className="space-y-4">
+                <h2 className="text-2xl font-bold flex items-center gap-2">
+                  <Zap className="w-6 h-6 text-primary" />
+                  خدمات قد تعجبك
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {relatedServices.map((rel) => (
+                    <Link key={rel.id} href={`/services/${rel.slug}`}>
+                      <Card className="hover:border-primary/50 transition-colors h-full">
+                        <CardContent className="p-4 flex gap-4 items-center">
+                          {rel.image_url && (
+                            <img
+                              src={rel.image_url}
+                              alt={rel.name_ar || rel.name}
+                              className="w-16 h-16 rounded-lg object-cover bg-secondary h-full"
+                            />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-bold text-sm truncate">{rel.name_ar || rel.name}</h3>
+                            <p className="text-primary font-bold">${rel.price.toFixed(2)}</p>
+                          </div>
+                          <ArrowRight className="w-4 h-4 text-muted-foreground rotate-180" />
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar - Order Card */}
@@ -576,7 +649,7 @@ const ServiceDetail = () => {
                 {service.requires_comments && (
                   <div className="space-y-2">
                     <Label>
-                      التعليقات المطلوبة * 
+                      التعليقات المطلوبة *
                       <span className="text-muted-foreground font-normal mr-2">
                         (عدد التعليقات: {orderComments.split('\n').filter(line => line.trim()).length})
                       </span>
@@ -631,7 +704,7 @@ const ServiceDetail = () => {
             </Card>
           </div>
         </div>
-      </main>
+      </main >
 
       <Footer />
 
@@ -700,7 +773,7 @@ const ServiceDetail = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 };
 

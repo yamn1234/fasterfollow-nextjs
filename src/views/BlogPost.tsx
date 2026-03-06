@@ -40,54 +40,87 @@ interface Category {
   name_ar: string | null;
 }
 
-const BlogPostPage = () => {
+interface BlogPostViewProps {
+  initialPost?: BlogPost | null;
+}
+
+const BlogPostPage = ({ initialPost }: BlogPostViewProps) => {
   const { slug } = useParams<{ slug: string }>();
-  const [post, setPost] = useState<BlogPost | null>(null);
+  const [post, setPost] = useState<BlogPost | null>(initialPost || null);
   const [category, setCategory] = useState<Category | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(!initialPost);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    fetchPost();
+    if (slug) {
+      if (!post || post.slug !== slug) {
+        fetchPost();
+      } else {
+        // Fetch category and related even if we have initial post
+        fetchPost(true);
+      }
+    }
   }, [slug]);
 
-  const fetchPost = async () => {
+  const fetchPost = async (onlyAdditional = false) => {
     try {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .eq('slug', slug)
-        .eq('status', 'published')
-        .eq('is_archived', false)
-        .single();
+      if (!onlyAdditional) setLoading(true);
 
-      if (error || !data) {
-        setNotFound(true);
-        return;
+      let currentPost = post;
+
+      if (!onlyAdditional) {
+        const { data, error } = await supabase
+          .from('blog_posts')
+          .select('*')
+          .eq('slug', slug)
+          .eq('status', 'published')
+          .eq('is_archived', false)
+          .single();
+
+        if (error || !data) {
+          setNotFound(true);
+          return;
+        }
+
+        setPost(data);
+        currentPost = data;
+
+        // Increment views
+        await supabase
+          .from('blog_posts')
+          .update({ views_count: (data.views_count || 0) + 1 })
+          .eq('id', data.id);
       }
 
-      setPost(data);
-
-      // Increment views
-      await supabase
-        .from('blog_posts')
-        .update({ views_count: (data.views_count || 0) + 1 })
-        .eq('id', data.id);
+      if (!currentPost) return;
 
       // Fetch category
-      if (data.category_id) {
+      if (currentPost.category_id) {
         const { data: catData } = await supabase
           .from('blog_categories')
           .select('id, name, name_ar')
-          .eq('id', data.category_id)
+          .eq('id', currentPost.category_id)
           .single();
         setCategory(catData);
+
+        // Fetch related posts
+        const { data: relatedData } = await supabase
+          .from('blog_posts')
+          .select('*')
+          .eq('category_id', currentPost.category_id)
+          .eq('status', 'published')
+          .eq('is_archived', false)
+          .neq('id', currentPost.id)
+          .limit(3);
+
+        if (relatedData) setRelatedPosts(relatedData);
       }
     } catch (error) {
       console.error('Error fetching post:', error);
-      setNotFound(true);
+      if (!onlyAdditional) setNotFound(true);
     } finally {
-      setLoading(false);
+      if (!onlyAdditional) setLoading(false);
     }
   };
 
@@ -204,6 +237,29 @@ const BlogPostPage = () => {
             dangerouslySetInnerHTML={{ __html: post.content || '' }}
           />
         </article>
+
+        {/* Related Posts */}
+        {relatedPosts.length > 0 && (
+          <div className="mt-16 pt-8 border-t">
+            <h2 className="text-2xl font-bold mb-8">مقالات قد تهمك</h2>
+            <div className="grid md:grid-cols-3 gap-6">
+              {relatedPosts.map((relPost) => (
+                <Link key={relPost.id} href={`/${relPost.slug}`} className="group">
+                  <div className="relative h-48 rounded-xl overflow-hidden mb-4">
+                    <img
+                      src={relPost.featured_image || ''}
+                      alt={relPost.title_ar || relPost.title}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <h3 className="font-bold line-clamp-2 group-hover:text-primary transition-colors">
+                    {relPost.title_ar || relPost.title}
+                  </h3>
+                </Link>
+              ))}
+            </div>
+          </div>
+        )}
       </main>
 
       <Footer />

@@ -40,10 +40,25 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default function Page() {
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug: rawSlug } = await params;
+  const decodedSlug = decodeURIComponent(rawSlug);
+
+  const { data: service } = await supabase
+    .from("services")
+    .select(`
+      id, name, name_ar, description, description_ar, price,
+      min_quantity, max_quantity, average_rating, reviews_count, delivery_time,
+      icon, image_url, requires_comments, category_id, slug,
+      seo_title, seo_description, seo_keywords, og_title, og_description, og_image,
+      service_categories(name, name_ar)
+    `)
+    .or(`slug.eq.${decodedSlug},slug.eq.${rawSlug}`)
+    .single();
+
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>}>
-      <ServiceDetail />
+      <ServiceDetail initialService={service as any} />
     </Suspense>
   );
 }

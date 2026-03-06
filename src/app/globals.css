@@ -89,4 +89,16 @@
       transform: scale(1.02);
     }
   }
+
+  /* Fix for empty paragraphs in rich text editor */
+  .prose p:empty::after {
+    content: "\00a0";
+  }
+
+  /* Ensure images in rich text are fully responsive */
+  .prose img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+  }
 }

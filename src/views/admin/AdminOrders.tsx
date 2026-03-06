@@ -164,42 +164,58 @@ const AdminOrders = () => {
 
   const fetchOrders = async () => {
     try {
-      // Fetch orders first
+      // Fetch orders with a reasonable limit to prevent DOM freezes
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('*')
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .limit(1000);
 
       if (ordersError) throw ordersError;
 
-      // Fetch services and profiles separately to avoid RLS issues
-      const ordersWithDetails = await Promise.all(
-        (ordersData || []).map(async (order) => {
-          // Get service name
-          const { data: serviceData } = await supabase
-            .from('services')
-            .select('name, name_ar')
-            .eq('id', order.service_id)
-            .maybeSingle();
+      // Extract unique IDs
+      const serviceIds = [...new Set((ordersData || []).map(o => o.service_id).filter(Boolean))];
+      const userIds = [...new Set((ordersData || []).map(o => o.user_id).filter(Boolean))];
 
-          // Get profile name
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('full_name, user_id')
-            .eq('user_id', order.user_id)
-            .maybeSingle();
+      // Fetch services in one go
+      let servicesMap: Record<string, any> = {};
+      if (serviceIds.length > 0) {
+        const { data: servicesData } = await supabase
+          .from('services')
+          .select('id, name, name_ar')
+          .in('id', serviceIds);
 
-          // Get user email from auth (admin only)
-          const { data: userData } = await supabase.auth.admin.getUserById(order.user_id).catch(() => ({ data: null }));
+        if (servicesData) {
+          servicesMap = servicesData.reduce((acc, service) => {
+            acc[service.id] = { name: service.name, name_ar: service.name_ar };
+            return acc;
+          }, {} as Record<string, any>);
+        }
+      }
 
-          return {
-            ...order,
-            services: serviceData,
-            profiles: profileData,
-            user_email: userData?.user?.email || null,
-          };
-        })
-      );
+      // Fetch profiles in one go
+      let profilesMap: Record<string, any> = {};
+      if (userIds.length > 0) {
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('user_id, full_name')
+          .in('user_id', userIds);
+
+        if (profilesData) {
+          profilesMap = profilesData.reduce((acc, profile) => {
+            acc[profile.user_id] = { full_name: profile.full_name, user_id: profile.user_id };
+            return acc;
+          }, {} as Record<string, any>);
+        }
+      }
+
+      // Map orders with their details synchronously
+      const ordersWithDetails = (ordersData || []).map(order => ({
+        ...order,
+        services: servicesMap[order.service_id] || null,
+        profiles: profilesMap[order.user_id] || null,
+        user_email: null, // Avoided to prevent rate limit (auth.admin.getUserById N+1)
+      }));
 
       setOrders(ordersWithDetails);
     } catch (error) {

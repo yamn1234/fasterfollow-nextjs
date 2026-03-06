@@ -26,6 +26,22 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  poweredByHeader: false,
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.fasterfollow.net" }],
+        destination: "https://fasterfollow.net/:path*",
+        permanent: true,
+      },
+      {
+        source: "/page/:slug",
+        destination: "/:slug",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

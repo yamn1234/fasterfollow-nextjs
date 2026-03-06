@@ -13,13 +13,22 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 
-const DynamicContentView = () => {
+interface DynamicContentViewProps {
+    initialData?: any;
+    initialType?: 'page' | 'blog' | null;
+}
+
+const DynamicContentView = ({ initialData, initialType }: DynamicContentViewProps) => {
     const { slug } = useParams<{ slug: string }>();
-    const [contentType, setContentType] = useState<'page' | 'blog' | null>(null);
-    const [loading, setLoading] = useState(true);
+    const [contentType, setContentType] = useState<'page' | 'blog' | null>(initialType || null);
+    const [loading, setLoading] = useState(!initialType);
 
     useEffect(() => {
-        identifyContent();
+        if (!contentType || !initialData) {
+            identifyContent();
+        } else {
+            setLoading(false);
+        }
     }, [slug]);
 
     const identifyContent = async () => {
@@ -77,11 +86,11 @@ const DynamicContentView = () => {
     }
 
     if (contentType === 'page') {
-        return <PageView />;
+        return <PageView initialData={initialData} />;
     }
 
     if (contentType === 'blog') {
-        return <BlogPostView />;
+        return <BlogPostView initialPost={initialData} />;
     }
 
     // Not Found state

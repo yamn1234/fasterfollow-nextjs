@@ -62,14 +62,27 @@ export function RichTextEditor({
   if (!editor) return null;
 
   const addLink = () => {
-    const url = window.prompt('أدخل رابط URL:');
-    if (url) {
-      editor.chain().focus().setLink({ href: url }).run();
+    const previousUrl = editor.getAttributes('link').href;
+    const url = window.prompt('أدخل رابط URL:', previousUrl || '');
+
+    if (url === null) return;
+
+    if (url === '') {
+      editor.chain().focus().extendMarkRange('link').unsetLink().run();
+      return;
+    }
+
+    const { from, to } = editor.state.selection;
+    if (from === to) {
+      // If no text is selected, insert the URL as a link
+      editor.chain().focus().insertContent(`<a href="${url}">${url}</a>`).run();
+    } else {
+      editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
     }
   };
 
   const addImage = () => {
-    const url = window.prompt('أدخل رابط الصورة:');
+    const url = window.prompt('أدخل رابط الصورة (يجب أن يكون رابط URL صحيح):');
     if (url) {
       editor.chain().focus().setImage({ src: url }).run();
     }

@@ -68,10 +68,31 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default function DynamicPageRoute() {
+export default async function DynamicPageRoute({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug: rawSlug } = await params;
+  const decodedSlug = decodeURIComponent(rawSlug);
+
+  // 1. Try to find a page
+  const { data: page } = await supabase
+    .from('pages')
+    .select('*')
+    .or(`slug.eq.${decodedSlug},slug.eq.${rawSlug}`)
+    .maybeSingle();
+
+  // 2. Try to find a blog post if not a page
+  let post = null;
+  if (!page) {
+    const { data: blogPost } = await supabase
+      .from('blog_posts')
+      .select('*')
+      .or(`slug.eq.${decodedSlug},slug.eq.${rawSlug}`)
+      .maybeSingle();
+    post = blogPost;
+  }
+
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>}>
-      <DynamicContentView />
+      <DynamicContentView initialData={page || post} initialType={page ? 'page' : (post ? 'blog' : null)} />
     </Suspense>
   );
 }

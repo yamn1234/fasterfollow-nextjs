@@ -15,6 +15,8 @@ import {
   Square,
   X,
   ArrowUpDown,
+  Eye,
+  ExternalLink,
 } from 'lucide-react';
 import ServiceSortDialog from '@/components/admin/ServiceSortDialog';
 import { Button } from '@/components/ui/button';
@@ -141,7 +143,7 @@ const AdminServices = () => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  
+
   // Sort dialog state
   const [sortDialogOpen, setSortDialogOpen] = useState(false);
 
@@ -363,7 +365,7 @@ const AdminServices = () => {
     setImporting(true);
     try {
       const selectedServices = providerServices.filter(s => selectedImportIds.has(s.id));
-      
+
       const response = await supabase.functions.invoke('smm-import-services', {
         body: {
           providerId: importFormData.provider_id,
@@ -403,7 +405,7 @@ const AdminServices = () => {
 
   const handleDeleteSelected = async () => {
     if (selectedIds.size === 0) return;
-    
+
     setDeleting(true);
     try {
       const { error } = await supabase
@@ -663,7 +665,7 @@ const AdminServices = () => {
   const providerCategories = [...new Set(providerServices.map(s => s.category))].sort();
 
   const filteredProviderServices = providerServices.filter((service) => {
-    const matchesSearch = 
+    const matchesSearch =
       service.name.toLowerCase().includes(importSearchQuery.toLowerCase()) ||
       service.id.includes(importSearchQuery);
     const matchesCategory = importCategoryFilter === 'all' || service.category === importCategoryFilter;
@@ -696,8 +698,8 @@ const AdminServices = () => {
             <ArrowUpDown className="w-4 h-4 ml-2" />
             ترتيب الخدمات
           </Button>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             onClick={() => {
               setImportDialogOpen(true);
               setImportStep('config');
@@ -876,6 +878,19 @@ const AdminServices = () => {
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>إجراءات</DropdownMenuLabel>
                             <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={() => window.open(`/services/${service.slug}`, '_blank')}
+                            >
+                              <ExternalLink className="w-4 h-4 ml-2" />
+                              معاينة الرابط
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => window.open(`https://search.google.com/test/rich-results?url=https://fasterfollow.net/services/${service.slug}`, '_blank')}
+                            >
+                              <Search className="w-4 h-4 ml-2" />
+                              اختبار SEO
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => openEditDialog(service)}>
                               <Pencil className="w-4 h-4 ml-2" />
                               تعديل
@@ -916,7 +931,7 @@ const AdminServices = () => {
           <DialogHeader>
             <DialogTitle>{selectedService ? 'تعديل الخدمة' : 'إضافة خدمة جديدة'}</DialogTitle>
           </DialogHeader>
-          
+
           <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList className="w-full">
               <TabsTrigger value="basic" className="flex-1">معلومات أساسية</TabsTrigger>
@@ -1219,7 +1234,7 @@ const AdminServices = () => {
               {importStep === 'config' ? 'استيراد خدمات من المزود' : 'اختر الخدمات للاستيراد'}
             </DialogTitle>
           </DialogHeader>
-          
+
           {importStep === 'config' ? (
             <div className="space-y-4">
               <div className="space-y-2">
@@ -1286,8 +1301,8 @@ const AdminServices = () => {
                     dir="ltr"
                     className="flex-1"
                   />
-                  <Button 
-                    onClick={fetchSingleService} 
+                  <Button
+                    onClick={fetchSingleService}
                     disabled={loadingSingleService || !importFormData.provider_id || !singleServiceId.trim()}
                     variant="secondary"
                   >
@@ -1361,7 +1376,7 @@ const AdminServices = () => {
                     onCheckedChange={toggleImportSelectAll}
                   />
                   <span className="text-sm">
-                    {selectedImportIds.size > 0 
+                    {selectedImportIds.size > 0
                       ? `تم تحديد ${selectedImportIds.size} من ${filteredProviderServices.length}`
                       : `${filteredProviderServices.length} خدمة متاحة`
                     }
@@ -1389,7 +1404,7 @@ const AdminServices = () => {
                   </TableHeader>
                   <TableBody>
                     {filteredProviderServices.map((service) => (
-                      <TableRow 
+                      <TableRow
                         key={service.id}
                         className={`cursor-pointer ${selectedImportIds.has(service.id) ? 'bg-primary/5' : ''}`}
                         onClick={() => toggleImportSelect(service.id)}
@@ -1425,8 +1440,8 @@ const AdminServices = () => {
                 <Button variant="outline" onClick={() => setImportStep('config')}>
                   رجوع
                 </Button>
-                <Button 
-                  onClick={handleImportServices} 
+                <Button
+                  onClick={handleImportServices}
                   disabled={importing || selectedImportIds.size === 0}
                 >
                   {importing ? (

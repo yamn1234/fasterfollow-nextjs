@@ -26,14 +26,24 @@ interface PageData {
   is_indexable: boolean | null;
 }
 
-const PageView = () => {
+interface PageViewProps {
+  initialData?: PageData | null;
+}
+
+const PageView = ({ initialData }: PageViewProps) => {
   const { slug } = useParams<{ slug: string }>();
-  const [page, setPage] = useState<PageData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState<PageData | null>(initialData || null);
+  const [loading, setLoading] = useState(!initialData);
   const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
-    fetchPage();
+    if (slug) {
+      if (!page || page.slug !== slug) {
+        fetchPage();
+      } else {
+        setLoading(false);
+      }
+    }
   }, [slug]);
 
   const fetchPage = async () => {
