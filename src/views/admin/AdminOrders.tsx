@@ -88,6 +88,7 @@ const AdminOrders = () => {
   const [syncing, setSyncing] = useState(false);
   const [placingOrder, setPlacingOrder] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalOrders, setTotalOrders] = useState(0);
   const PAGE_SIZE = 50;
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -151,6 +152,19 @@ const AdminOrders = () => {
     };
   }, []);
 
+  useEffect(() => {
+    fetchOrders();
+  }, [currentPage, statusFilter]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1);
+      fetchOrders();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
   // background status polling - delay initial sync by 10 seconds to avoid UI freeze on mount
   useEffect(() => {
     const initialTimeout = setTimeout(() => {
@@ -169,13 +183,29 @@ const AdminOrders = () => {
   }, []);
 
   const fetchOrders = async () => {
+    setLoading(true);
     try {
-      // Fetch orders with a reasonable limit to prevent DOM freezes
-      const { data: ordersData, error: ordersError } = await supabase
+      let query = supabase
         .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false })
-        .limit(1000);
+        .select('*', { count: 'exact' })
+        .order('created_at', { ascending: false });
+
+      if (statusFilter !== 'all') {
+        query = query.eq('status', statusFilter as any);
+      }
+
+      if (searchQuery) {
+        if (!isNaN(Number(searchQuery))) {
+          query = query.or(`id.ilike.%${searchQuery}%,link.ilike.%${searchQuery}%,external_order_id.ilike.%${searchQuery}%,order_number.eq.${Number(searchQuery)}`);
+        } else {
+          query = query.or(`id.ilike.%${searchQuery}%,link.ilike.%${searchQuery}%,external_order_id.ilike.%${searchQuery}%`);
+        }
+      }
+
+      const startIndex = (currentPage - 1) * PAGE_SIZE;
+      query = query.range(startIndex, startIndex + PAGE_SIZE - 1);
+
+      const { data: ordersData, count, error: ordersError } = await query;
 
       if (ordersError) throw ordersError;
 
@@ -224,6 +254,7 @@ const AdminOrders = () => {
       }));
 
       setOrders(ordersWithDetails);
+      if (count !== null) setTotalOrders(count);
     } catch (error) {
       console.error('Error fetching orders:', error);
       toast({
@@ -377,23 +408,7 @@ const AdminOrders = () => {
     }
   };
 
-  const filteredOrders = orders.filter((order) => {
-    const orderNum = order.order_number?.toString() || '';
-    const matchesSearch =
-      orderNum.includes(searchQuery) ||
-      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.link.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (order as any).profiles?.full_name?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const totalPages = Math.ceil(filteredOrders.length / PAGE_SIZE);
-  const paginatedOrders = filteredOrders.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, statusFilter]);
+  const totalPages = Math.ceil(totalOrders / PAGE_SIZE);
 
   const statusConfig: Record<OrderStatus, { label: string; color: string; icon: React.ElementType }> = {
     pending: { label: 'معلق', color: 'bg-yellow-500/10 text-yellow-500', icon: Clock },
@@ -508,14 +523,14 @@ const AdminOrders = () => {
                       <Loader2 className="w-6 h-6 animate-spin mx-auto" />
                     </TableCell>
                   </TableRow>
-                ) : paginatedOrders.length === 0 ? (
+                ) : orders.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-10">
                       لا توجد طلبات
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedOrders.map((order) => {
+                  orders.map((order) => {
                     const status = statusConfig[order.status];
                     const StatusIcon = status.icon;
                     const customerName = (order as any).profiles?.full_name || 'غير محدد';
@@ -640,7 +655,7 @@ const AdminOrders = () => {
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-4 border-t">
               <p className="text-sm text-muted-foreground">
-                عرض {paginatedOrders.length} من {filteredOrders.length} طلب
+                عرض {orders.length} من {totalOrders} طلب
               </p>
               <div className="flex items-center gap-2">
                 <Button

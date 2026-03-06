@@ -84,21 +84,39 @@ const AdminUsers = () => {
   const [suspendDialogOpen, setSuspendDialogOpen] = useState(false);
   const [suspensionReason, setSuspensionReason] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
   const PAGE_SIZE = 50;
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [currentPage, roleFilter]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1); // Reset page on new search
+      fetchUsers();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const fetchUsers = async () => {
     try {
       setLoading(true);
 
-      // Fetch profiles directly
-      const { data: profiles, error } = await supabase
+      let query = supabase
         .from('profiles')
-        .select('*')
+        .select('*', { count: 'exact' })
         .order('created_at', { ascending: false });
+
+      if (searchQuery) {
+        query = query.or(`full_name.ilike.%${searchQuery}%,user_id.ilike.%${searchQuery}%`);
+      }
+
+      const startIndex = (currentPage - 1) * PAGE_SIZE;
+      query = query.range(startIndex, startIndex + PAGE_SIZE - 1);
+
+      const { data: profiles, count, error } = await query;
 
       if (error) {
         console.error('Profile fetch error:', error);
@@ -111,7 +129,7 @@ const AdminUsers = () => {
       }
 
       // Fetch roles for each user
-      const usersWithRoles = await Promise.all(
+      let usersWithRoles = await Promise.all(
         profiles.map(async (profile) => {
           const { data: roleData } = await supabase
             .from('user_roles')
@@ -125,6 +143,10 @@ const AdminUsers = () => {
           };
         })
       );
+
+      if (roleFilter !== 'all') {
+        usersWithRoles = usersWithRoles.filter(u => u.role === roleFilter);
+      }
 
       // Try to enrich with emails via edge function (optional, non-blocking)
       try {
@@ -145,7 +167,8 @@ const AdminUsers = () => {
         // Edge function not available, continue without emails
       }
 
-      setUsers(usersWithRoles);
+      setUsers(usersWithRoles as User[]);
+      if (count !== null) setTotalUsers(count);
     } catch (error) {
       console.error('Error fetching users:', error);
       toast({
@@ -202,22 +225,8 @@ const AdminUsers = () => {
     }
   };
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch =
-      user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.user_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    return matchesSearch && matchesRole;
-  });
+  const totalPages = Math.ceil(totalUsers / PAGE_SIZE);
 
-  const totalPages = Math.ceil(filteredUsers.length / PAGE_SIZE);
-  const paginatedUsers = filteredUsers.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
-
-  // Reset to first page when filters change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, roleFilter]);
 
   const roleColors: Record<string, string> = {
     admin: 'bg-primary/10 text-primary',
@@ -373,14 +382,14 @@ const AdminUsers = () => {
                       جاري التحميل...
                     </TableCell>
                   </TableRow>
-                ) : paginatedUsers.length === 0 ? (
+                ) : users.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-10">
                       لا توجد نتائج
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedUsers.map((user) => (
+                  users.map((user) => (
                     <TableRow key={user.id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -489,7 +498,7 @@ const AdminUsers = () => {
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-4 border-t">
               <p className="text-sm text-muted-foreground">
-                عرض {paginatedUsers.length} من {filteredUsers.length} مستخدم
+                عرض {users.length} من {totalUsers} مستخدم
               </p>
               <div className="flex items-center gap-2">
                 <Button

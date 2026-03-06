@@ -140,6 +140,7 @@ const AdminServices = () => {
   const [selectedService, setSelectedService] = useState<Service | null>(null);
   const [activeTab, setActiveTab] = useState('basic');
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalServices, setTotalServices] = useState(0);
   const PAGE_SIZE = 50;
 
   // Multi-select state
@@ -178,23 +179,54 @@ const AdminServices = () => {
 
   useEffect(() => {
     fetchServices();
+  }, [showArchived, currentPage, categoryFilter]);
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setCurrentPage(1); // Reset page on new search
+      fetchServices();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
     fetchCategories();
     fetchProviders();
-  }, [showArchived]);
+  }, []);
 
   const fetchServices = async () => {
+    setLoading(true);
     try {
       let query = supabase
         .from('services')
-        .select('*')
+        .select('*', { count: 'exact' })
         .eq('is_archived', showArchived)
         .order('created_at', { ascending: false });
 
-      const { data, error } = await query;
+      if (searchQuery) {
+        query = query.or(`name.ilike.%${searchQuery}%,slug.ilike.%${searchQuery}%,name_ar.ilike.%${searchQuery}%`);
+      }
+
+      if (categoryFilter !== 'all') {
+        query = query.eq('category_id', categoryFilter);
+      }
+
+      const startIndex = (currentPage - 1) * PAGE_SIZE;
+      query = query.range(startIndex, startIndex + PAGE_SIZE - 1);
+
+      const { data, count, error } = await query;
       if (error) throw error;
+
       setServices(data || []);
+      if (count !== null) setTotalServices(count);
     } catch (error) {
       console.error('Error fetching services:', error);
+      toast({
+        title: 'خطأ',
+        description: 'فشل في جلب الخدمات',
+        variant: 'destructive',
+      });
     } finally {
       setLoading(false);
     }
@@ -413,10 +445,10 @@ const AdminServices = () => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredServices.length) {
+    if (selectedIds.size === services.length && services.length > 0) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredServices.map(s => s.id)));
+      setSelectedIds(new Set(services.map(s => s.id)));
     }
   };
 
@@ -527,26 +559,10 @@ const AdminServices = () => {
   };
 
 
-  const filteredServices = useMemo(() => services.filter((service) => {
-    const matchesSearch =
-      service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      service.slug.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = categoryFilter === 'all' || service.category_id === categoryFilter;
-    return matchesSearch && matchesCategory;
-  }), [services, searchQuery, categoryFilter]);
-
-  const totalPages = Math.ceil(filteredServices.length / PAGE_SIZE);
-  const paginatedServices = useMemo(() => {
-    const startIndex = (currentPage - 1) * PAGE_SIZE;
-    return filteredServices.slice(startIndex, startIndex + PAGE_SIZE);
-  }, [filteredServices, currentPage]);
+  const totalPages = Math.ceil(totalServices / PAGE_SIZE);
 
   const providerCategories = useMemo(() => [...new Set(providerServices.map(s => s.category))].sort(), [providerServices]);
 
-  // Reset page to 1 when search or filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, categoryFilter]);
 
   const filteredProviderServices = useMemo(() => providerServices.filter((service) => {
     const matchesSearch =
@@ -676,8 +692,9 @@ const AdminServices = () => {
                 <TableRow>
                   <TableHead className="w-12">
                     <Checkbox
-                      checked={selectedIds.size === filteredServices.length && filteredServices.length > 0}
+                      checked={selectedIds.size === services.length && services.length > 0}
                       onCheckedChange={toggleSelectAll}
+                      aria-label="Select all"
                     />
                   </TableHead>
                   <TableHead>الخدمة</TableHead>
@@ -697,14 +714,14 @@ const AdminServices = () => {
                       <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                     </TableCell>
                   </TableRow>
-                ) : paginatedServices.length === 0 ? (
+                ) : services.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={9} className="text-center py-10">
                       لا توجد خدمات
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedServices.map((service) => (
+                  services.map((service) => (
                     <TableRow key={service.id} className={service.is_archived ? "opacity-60" : ""}>
                       <TableCell>
                         <Checkbox
@@ -812,7 +829,7 @@ const AdminServices = () => {
           {totalPages > 1 && (
             <div className="flex items-center justify-between p-4 border-t">
               <span className="text-sm text-muted-foreground">
-                عرض {paginatedServices.length} من {filteredServices.length} خدمة
+                عرض {services.length} من {totalServices} خدمة
               </span>
               <div className="flex items-center gap-2">
                 <Button
