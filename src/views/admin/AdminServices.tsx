@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import ServiceEditDialog from '@/components/admin/ServiceEditDialog';
 import {
   Search,
   Plus,
@@ -158,32 +159,7 @@ const AdminServices = () => {
   const [singleServiceId, setSingleServiceId] = useState('');
   const [loadingSingleService, setLoadingSingleService] = useState(false);
 
-  const [formData, setFormData] = useState({
-    name: '',
-    name_ar: '',
-    slug: '',
-    description: '',
-    description_ar: '',
-    price: '',
-    min_quantity: '1',
-    max_quantity: '10000',
-    delivery_time: '',
-    category_id: '',
-    provider_id: '',
-    external_service_id: '',
-    is_active: true,
-    requires_comments: false,
-    icon: '',
-    image_url: '',
-    // SEO
-    seo_title: '',
-    seo_description: '',
-    seo_keywords: '',
-    canonical_url: '',
-    og_title: '',
-    og_description: '',
-    is_indexable: true,
-  });
+
 
   const [categoryFormData, setCategoryFormData] = useState({
     name: '',
@@ -479,75 +455,7 @@ const AdminServices = () => {
       .trim();
   };
 
-  const handleSaveService = async () => {
-    try {
-      const serviceData = {
-        name: formData.name,
-        name_ar: formData.name_ar || null,
-        slug: formData.slug || generateSlug(formData.name),
-        description: formData.description || null,
-        price: parseFloat(formData.price) || 0,
-        min_quantity: parseInt(formData.min_quantity) || 1,
-        max_quantity: parseInt(formData.max_quantity) || 10000,
-        delivery_time: formData.delivery_time || null,
-        category_id: formData.category_id || null,
-        provider_id: formData.provider_id || null,
-        external_service_id: formData.external_service_id || null,
-        is_active: formData.is_active,
-        requires_comments: formData.requires_comments,
-        icon: formData.icon || null,
-        image_url: formData.image_url || null,
-        seo_title: formData.seo_title || null,
-        seo_description: formData.seo_description || null,
-        seo_keywords: formData.seo_keywords || null,
-        canonical_url: formData.canonical_url || null,
-        og_title: formData.og_title || null,
-        og_description: formData.og_description || null,
-        is_indexable: formData.is_indexable,
-      };
 
-      if (selectedService) {
-        const { error } = await supabase
-          .from('services')
-          .update(serviceData)
-          .eq('id', selectedService.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('services')
-          .insert(serviceData);
-        if (error) throw error;
-      }
-
-      const savedService = selectedService
-        ? { ...selectedService, ...serviceData }
-        : { ...serviceData, id: crypto.randomUUID(), created_at: new Date().toISOString(), is_archived: false } as Service;
-
-      if (selectedService) {
-        // Optimistically update the existing service in state
-        setServices(prev => prev.map(s => s.id === selectedService.id ? savedService : s));
-      } else {
-        // Optimistically add the new service at the top
-        setServices(prev => [savedService, ...prev]);
-      }
-
-      toast({
-        title: 'تم بنجاح',
-        description: selectedService ? 'تم تحديث الخدمة' : 'تم إضافة الخدمة',
-      });
-
-      setServiceDialogOpen(false);
-      resetForm();
-      // Refresh in background after a short delay
-      setTimeout(() => fetchServices(), 1500);
-    } catch (error: any) {
-      toast({
-        title: 'خطأ',
-        description: error.message || 'حدث خطأ',
-        variant: 'destructive',
-      });
-    }
-  };
 
   const handleArchiveService = async (service: Service) => {
     try {
@@ -611,64 +519,11 @@ const AdminServices = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      name_ar: '',
-      slug: '',
-      description: '',
-      description_ar: '',
-      price: '',
-      min_quantity: '1',
-      max_quantity: '10000',
-      delivery_time: '',
-      category_id: '',
-      provider_id: '',
-      external_service_id: '',
-      is_active: true,
-      requires_comments: false,
-      icon: '',
-      image_url: '',
-      seo_title: '',
-      seo_description: '',
-      seo_keywords: '',
-      canonical_url: '',
-      og_title: '',
-      og_description: '',
-      is_indexable: true,
-    });
-    setSelectedService(null);
-  };
-
   const openEditDialog = (service: Service) => {
     setSelectedService(service);
-    setFormData({
-      name: service.name,
-      name_ar: service.name_ar || '',
-      slug: service.slug,
-      description: service.description || '',
-      description_ar: '',
-      price: service.price.toString(),
-      min_quantity: service.min_quantity.toString(),
-      max_quantity: service.max_quantity.toString(),
-      delivery_time: service.delivery_time || '',
-      category_id: service.category_id || '',
-      provider_id: service.provider_id || '',
-      external_service_id: (service as any).external_service_id || '',
-      is_active: service.is_active,
-      requires_comments: (service as any).requires_comments || false,
-      icon: service.icon || '',
-      image_url: service.image_url || '',
-      seo_title: service.seo_title || '',
-      seo_description: service.seo_description || '',
-      seo_keywords: service.seo_keywords || '',
-      canonical_url: '',
-      og_title: '',
-      og_description: '',
-      is_indexable: service.is_indexable,
-    });
     setServiceDialogOpen(true);
   };
+
 
   const filteredServices = useMemo(() => services.filter((service) => {
     const matchesSearch =
@@ -729,7 +584,7 @@ const AdminServices = () => {
           <Button
             className="gradient-primary text-primary-foreground"
             onClick={() => {
-              resetForm();
+              setSelectedService(null);
               setServiceDialogOpen(true);
             }}
           >
@@ -942,247 +797,23 @@ const AdminServices = () => {
         </CardContent>
       </Card>
 
-      {/* Service Dialog */}
-      <Dialog open={serviceDialogOpen} onOpenChange={setServiceDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedService ? 'تعديل الخدمة' : 'إضافة خدمة جديدة'}</DialogTitle>
-          </DialogHeader>
-
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full">
-              <TabsTrigger value="basic" className="flex-1">معلومات أساسية</TabsTrigger>
-              <TabsTrigger value="seo" className="flex-1">SEO</TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="basic" className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>اسم الخدمة (إنجليزي)</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => {
-                      setFormData({
-                        ...formData,
-                        name: e.target.value,
-                        slug: generateSlug(e.target.value),
-                      });
-                    }}
-                    placeholder="Service Name"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>اسم الخدمة (عربي)</Label>
-                  <Input
-                    value={formData.name_ar}
-                    onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-                    placeholder="اسم الخدمة"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>الرابط (Slug)</Label>
-                <Input
-                  value={formData.slug}
-                  onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                  placeholder="service-name"
-                  dir="ltr"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label>الوصف</Label>
-                <Textarea
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  placeholder="وصف الخدمة..."
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>السعر</Label>
-                  <Input
-                    type="number"
-                    step="0.001"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                    placeholder="0.00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>الحد الأدنى</Label>
-                  <Input
-                    type="number"
-                    value={formData.min_quantity}
-                    onChange={(e) => setFormData({ ...formData, min_quantity: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>الحد الأقصى</Label>
-                  <Input
-                    type="number"
-                    value={formData.max_quantity}
-                    onChange={(e) => setFormData({ ...formData, max_quantity: e.target.value })}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label>السرعة التقريبية</Label>
-                <Input
-                  value={formData.delivery_time}
-                  onChange={(e) => setFormData({ ...formData, delivery_time: e.target.value })}
-                  placeholder="مثال: 0-1 ساعة أو 1-24 ساعة"
-                />
-                <p className="text-xs text-muted-foreground">
-                  يتم استيرادها تلقائياً من المزود، ويمكنك تعديلها يدوياً
-                </p>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>الفئة</Label>
-                  <Select
-                    value={formData.category_id || 'none'}
-                    onValueChange={(v) => setFormData({ ...formData, category_id: v === 'none' ? '' : v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر الفئة" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">بدون فئة</SelectItem>
-                      {categories.map((cat) => (
-                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>ربط بمزود API</Label>
-                  <Select
-                    value={formData.provider_id || 'none'}
-                    onValueChange={(v) => setFormData({ ...formData, provider_id: v === 'none' ? '' : v })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="اختر المزود" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">بدون مزود</SelectItem>
-                      {providers.map((provider) => (
-                        <SelectItem key={provider.id} value={provider.id}>{provider.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              {formData.provider_id && (
-                <div className="space-y-2">
-                  <Label>معرف الخدمة عند المزود (External Service ID)</Label>
-                  <Input
-                    value={formData.external_service_id}
-                    onChange={(e) => setFormData({ ...formData, external_service_id: e.target.value })}
-                    placeholder="مثال: 1234"
-                    dir="ltr"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    رقم الخدمة في API المزود - مطلوب لتنفيذ الطلبات تلقائياً
-                  </p>
-                </div>
-              )}
-
-              {/* Image Icon Picker */}
-              <div className="grid grid-cols-2 gap-4">
-                <ImageIconPicker
-                  label="أيقونة الخدمة"
-                  value={formData.icon}
-                  onChange={(val) => setFormData({ ...formData, icon: val })}
-                  folder="services/icons"
-                />
-                <ImageIconPicker
-                  label="صورة الخدمة"
-                  value={formData.image_url}
-                  onChange={(val) => setFormData({ ...formData, image_url: val })}
-                  folder="services/images"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="is_active"
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                />
-                <Label htmlFor="is_active">نشط</Label>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="requires_comments"
-                  checked={formData.requires_comments}
-                  onCheckedChange={(checked) => setFormData({ ...formData, requires_comments: checked })}
-                />
-                <Label htmlFor="requires_comments">يتطلب تعليقات (مثل خدمات التعليقات)</Label>
-              </div>
-            </TabsContent>
-
-            <TabsContent value="seo" className="space-y-4 mt-4">
-              <div className="space-y-2">
-                <Label>عنوان SEO</Label>
-                <Input
-                  value={formData.seo_title}
-                  onChange={(e) => setFormData({ ...formData, seo_title: e.target.value })}
-                  placeholder="عنوان الصفحة في محركات البحث"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {formData.seo_title.length}/60 حرف
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>وصف SEO</Label>
-                <Textarea
-                  value={formData.seo_description}
-                  onChange={(e) => setFormData({ ...formData, seo_description: e.target.value })}
-                  placeholder="وصف الصفحة في محركات البحث"
-                />
-                <p className="text-xs text-muted-foreground">
-                  {formData.seo_description.length}/160 حرف
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label>الكلمات المفتاحية</Label>
-                <Input
-                  value={formData.seo_keywords}
-                  onChange={(e) => setFormData({ ...formData, seo_keywords: e.target.value })}
-                  placeholder="كلمة1, كلمة2, كلمة3"
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Switch
-                  id="is_indexable"
-                  checked={formData.is_indexable}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_indexable: checked })}
-                />
-                <Label htmlFor="is_indexable">السماح بالفهرسة في محركات البحث</Label>
-              </div>
-            </TabsContent>
-          </Tabs>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setServiceDialogOpen(false)}>
-              إلغاء
-            </Button>
-            <Button onClick={handleSaveService}>
-              {selectedService ? 'حفظ التغييرات' : 'إضافة الخدمة'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <ServiceEditDialog
+        open={serviceDialogOpen}
+        onOpenChange={setServiceDialogOpen}
+        service={selectedService}
+        categories={categories}
+        providers={providers}
+        onSaved={(savedService, isNew) => {
+          if (isNew) {
+            setServices(prev => [savedService, ...prev]);
+          } else {
+            setServices(prev => prev.map(s => s.id === savedService.id ? savedService : s));
+          }
+          setSelectedService(null);
+          // Soft background refresh after 2s
+          setTimeout(() => fetchServices(), 2000);
+        }}
+      />
 
       {/* Category Dialog */}
       <Dialog open={categoryDialogOpen} onOpenChange={setCategoryDialogOpen}>
