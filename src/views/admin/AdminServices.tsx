@@ -519,6 +519,18 @@ const AdminServices = () => {
         if (error) throw error;
       }
 
+      const savedService = selectedService
+        ? { ...selectedService, ...serviceData }
+        : { ...serviceData, id: crypto.randomUUID(), created_at: new Date().toISOString(), is_archived: false } as Service;
+
+      if (selectedService) {
+        // Optimistically update the existing service in state
+        setServices(prev => prev.map(s => s.id === selectedService.id ? savedService : s));
+      } else {
+        // Optimistically add the new service at the top
+        setServices(prev => [savedService, ...prev]);
+      }
+
       toast({
         title: 'تم بنجاح',
         description: selectedService ? 'تم تحديث الخدمة' : 'تم إضافة الخدمة',
@@ -526,7 +538,8 @@ const AdminServices = () => {
 
       setServiceDialogOpen(false);
       resetForm();
-      fetchServices();
+      // Refresh in background after a short delay
+      setTimeout(() => fetchServices(), 1500);
     } catch (error: any) {
       toast({
         title: 'خطأ',
@@ -553,7 +566,10 @@ const AdminServices = () => {
         description: service.is_archived ? 'تم استعادة الخدمة' : 'تم أرشفة الخدمة',
       });
 
-      fetchServices();
+      // Optimistically remove from current list (since showArchived changed)
+      setServices(prev => prev.filter(s => s.id !== service.id));
+      // Background refresh
+      setTimeout(() => fetchServices(), 1000);
     } catch (error) {
       toast({
         title: 'خطأ',
@@ -860,11 +876,12 @@ const AdminServices = () => {
                         <Switch
                           checked={service.is_active}
                           onCheckedChange={async (checked) => {
+                            // Optimistically update UI immediately
+                            setServices(prev => prev.map(s => s.id === service.id ? { ...s, is_active: checked } : s));
                             await supabase
                               .from('services')
                               .update({ is_active: checked })
                               .eq('id', service.id);
-                            fetchServices();
                           }}
                         />
                       </TableCell>
