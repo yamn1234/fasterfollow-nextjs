@@ -172,7 +172,21 @@ const ServiceDetail = ({ initialService }: ServiceDetailProps) => {
       }
 
       const activeServiceId = onlyReviews ? service?.id : serviceData?.id;
+      const activeCategoryId = onlyReviews ? service?.category_id : serviceData?.category_id;
       if (!activeServiceId) return;
+
+      // Fetch related services (runs in both modes)
+      if (activeCategoryId && relatedServices.length === 0) {
+        const { data: relatedData } = await supabase
+          .from('services')
+          .select('id, name, name_ar, slug, price, image_url')
+          .eq('category_id', activeCategoryId)
+          .eq('is_active', true)
+          .neq('id', activeServiceId)
+          .limit(4);
+
+        if (relatedData) setRelatedServices(relatedData);
+      }
 
       // Fetch approved reviews
       const { data: reviewsData } = await supabase
