@@ -461,14 +461,14 @@ const Auth = () => {
               </div>
             </Link>
             <div>
-              <CardTitle className="text-2xl font-bold">تعيين كلمة مرور جديدة</CardTitle>
+              <h1 className="text-2xl font-bold tracking-tight">تعيين كلمة مرور جديدة</h1>
               <CardDescription className="mt-2">
                 أدخل كلمة المرور الجديدة لحسابك
               </CardDescription>
             </div>
           </CardHeader>
 
-          <form onSubmit={handleResetPassword}>
+          <form onSubmit={handleResetPassword} aria-label="نموذج إعادة تعيين كلمة المرور" role="form">
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="newPassword">كلمة المرور الجديدة</Label>
@@ -589,14 +589,14 @@ const Auth = () => {
               </div>
             </Link>
             <div>
-              <CardTitle className="text-2xl font-bold">التحقق الثنائي</CardTitle>
+              <h1 className="text-2xl font-bold tracking-tight">التحقق الثنائي</h1>
               <CardDescription className="mt-2">
                 تم إرسال رمز التحقق إلى {email}
               </CardDescription>
             </div>
           </CardHeader>
 
-          <form onSubmit={handle2FAVerify}>
+          <form onSubmit={handle2FAVerify} aria-label="نموذج التحقق بخطوتين" role="form">
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="otp2fa">رمز التحقق</Label>
@@ -700,14 +700,14 @@ const Auth = () => {
               </div>
             </Link>
             <div>
-              <CardTitle className="text-2xl font-bold">أدخل كود التحقق</CardTitle>
+              <h1 className="text-2xl font-bold tracking-tight">أدخل كود التحقق</h1>
               <CardDescription className="mt-2">
                 تم إرسال كود التحقق إلى {email}
               </CardDescription>
             </div>
           </CardHeader>
 
-          <form onSubmit={handleVerifyOtp}>
+          <form onSubmit={handleVerifyOtp} aria-label="نموذج التحقق من الكود" role="form">
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="otp">كود التحقق</Label>
@@ -810,14 +810,14 @@ const Auth = () => {
               </div>
             </Link>
             <div>
-              <CardTitle className="text-2xl font-bold">استعادة كلمة المرور</CardTitle>
+              <h1 className="text-2xl font-bold tracking-tight">استعادة كلمة المرور</h1>
               <CardDescription className="mt-2">
                 أدخل بريدك الإلكتروني لإرسال رابط استعادة كلمة المرور
               </CardDescription>
             </div>
           </CardHeader>
 
-          <form onSubmit={handleForgotPassword}>
+          <form onSubmit={handleForgotPassword} aria-label="نموذج استعادة كلمة المرور" role="form">
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">البريد الإلكتروني</Label>
@@ -897,9 +897,9 @@ const Auth = () => {
             </div>
           </Link>
           <div>
-            <CardTitle className="text-2xl font-bold">
+            <h1 className="text-2xl font-bold tracking-tight">
               {isLogin ? "تسجيل الدخول" : "إنشاء حساب جديد"}
-            </CardTitle>
+            </h1>
             <CardDescription className="mt-2">
               {isLogin
                 ? "أدخل بياناتك للوصول إلى حسابك"
@@ -908,7 +908,7 @@ const Auth = () => {
           </div>
         </CardHeader>
 
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} aria-label={isLogin ? "نموذج تسجيل الدخول" : "نموذج تسجيل حساب جديد"} role="form">
           <CardContent className="space-y-4">
             {!isLogin && (
               <div className="space-y-2">

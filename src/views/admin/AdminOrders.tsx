@@ -15,6 +15,9 @@ import {
   CheckCircle,
   AlertCircle,
   Loader2,
+  User,
+  Package,
+  History as HistoryIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -196,9 +199,9 @@ const AdminOrders = () => {
 
       if (searchQuery) {
         if (!isNaN(Number(searchQuery))) {
-          query = query.or(`id.ilike.%${searchQuery}%,link.ilike.%${searchQuery}%,external_order_id.ilike.%${searchQuery}%,order_number.eq.${Number(searchQuery)}`);
+          query = query.or(`id.ilike.% ${searchQuery}%, link.ilike.% ${searchQuery}%, external_order_id.ilike.% ${searchQuery}%, order_number.eq.${Number(searchQuery)} `);
         } else {
-          query = query.or(`id.ilike.%${searchQuery}%,link.ilike.%${searchQuery}%,external_order_id.ilike.%${searchQuery}%`);
+          query = query.or(`id.ilike.% ${searchQuery}%, link.ilike.% ${searchQuery}%, external_order_id.ilike.% ${searchQuery}% `);
         }
       }
 
@@ -325,7 +328,7 @@ const AdminOrders = () => {
           amount: order.price,
           balance_before: profile.balance,
           balance_after: profile.balance + order.price,
-          description: `استرداد طلب #${order.order_number}`,
+          description: `استرداد طلب #${order.order_number} `,
         });
       }
 
@@ -566,7 +569,7 @@ const AdminOrders = () => {
                         <TableCell className="font-medium">{order.quantity.toLocaleString()}</TableCell>
                         <TableCell className="font-medium text-primary">${order.price.toFixed(2)}</TableCell>
                         <TableCell>
-                          <Badge className={`${status.color} gap-1`}>
+                          <Badge className={`${status.color} gap - 1`}>
                             <StatusIcon className="w-3 h-3" />
                             {status.label}
                           </Badge>
@@ -708,7 +711,7 @@ const AdminOrders = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">الحالة</p>
-                  <Badge className={`${statusConfig[selectedOrder.status].color} gap-1 mt-1`}>
+                  <Badge className={`${statusConfig[selectedOrder.status].color} gap - 1 mt - 1`}>
                     {statusConfig[selectedOrder.status].label}
                   </Badge>
                 </div>
@@ -719,12 +722,12 @@ const AdminOrders = () => {
               </div>
 
               {/* Customer Info */}
-              <div className="space-y-2">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <span className="w-2 h-2 bg-primary rounded-full"></span>
-                  معلومات العميل
-                </h4>
-                <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
+              <div className="space-y-4">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" />
+                  بيانات العميل
+                </h3>
+                <div className="grid grid-cols-2 gap-4 text-sm bg-muted/30 p-4 rounded-lg">
                   <div>
                     <p className="text-sm text-muted-foreground">اسم العميل</p>
                     <p className="font-medium">{(selectedOrder as any).profiles?.full_name || 'غير محدد'}</p>
@@ -745,12 +748,12 @@ const AdminOrders = () => {
               </div>
 
               {/* Service Info */}
-              <div className="space-y-2">
-                <h4 className="font-semibold flex items-center gap-2">
-                  <span className="w-2 h-2 bg-primary rounded-full"></span>
+              <div className="space-y-4 mt-6">
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Package className="h-4 w-4 text-primary" />
                   تفاصيل الخدمة
-                </h4>
-                <div className="grid grid-cols-2 gap-4 p-4 border rounded-lg">
+                </h3>
+                <div className="bg-muted/30 p-4 rounded-lg space-y-3">
                   <div className="col-span-2">
                     <p className="text-sm text-muted-foreground">الخدمة</p>
                     <p className="font-medium">{(selectedOrder as any).services?.name || (selectedOrder as any).services?.name_ar || 'غير محدد'}</p>
@@ -782,12 +785,12 @@ const AdminOrders = () => {
 
               {/* Comments */}
               {selectedOrder.comments && (
-                <div className="space-y-2">
-                  <h4 className="font-semibold flex items-center gap-2">
-                    <span className="w-2 h-2 bg-primary rounded-full"></span>
-                    ملاحظات العميل
-                  </h4>
-                  <div className="p-4 border rounded-lg bg-muted/30">
+                <div className="space-y-4 mt-6">
+                  <h3 className="font-semibold flex items-center gap-2">
+                    <HistoryIcon className="h-4 w-4 text-primary" />
+                    تحديثات المزود ({(selectedOrder as any).provider?.name || 'غير محدد'})
+                  </h3>
+                  <div className="bg-muted/30 p-4 rounded-lg text-sm space-y-2">
                     <p className="text-sm whitespace-pre-wrap">{selectedOrder.comments}</p>
                   </div>
                 </div>

@@ -1890,9 +1890,9 @@ const SitemapCard = () => {
         )}
 
         {/* Instructions */}
-        <div className="bg-muted/30 rounded-lg p-4 space-y-2">
-          <h4 className="font-semibold text-sm">ملاحظات مهمة:</h4>
-          <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+        <div className="mt-8 p-4 bg-muted/30 rounded-lg border border-border/50">
+          <h3 className="font-semibold text-sm">ملاحظات مهمة:</h3>
+          <ul className="mt-2 text-sm text-muted-foreground list-disc list-inside space-y-1">
             <li>تأكد من إضافة موقعك وتثبيته في Google Search Console</li>
             <li>تأكد من إضافة بريد الـ Service Account كمالك للموقع</li>
             <li>يمكنك إرسال الـ Sitemap تلقائياً عند كل تحديث للمحتوى</li>

@@ -561,9 +561,9 @@ const AdminBlog = ({ activeTab: initialTab = 'posts' }: AdminBlogProps) => {
                 onChange={(value) => setFormData({ ...formData, content: value })}
               />
             </div>
-            <div className="border-t pt-4">
-              <h4 className="font-medium mb-3">إعدادات SEO</h4>
-              <div className="space-y-3">
+            <div className="border border-border/50 rounded-lg p-4 bg-muted/10">
+              <h3 className="font-medium mb-3">إعدادات SEO</h3>
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label>عنوان SEO</Label>
                   <Input
