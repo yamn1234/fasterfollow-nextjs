@@ -226,6 +226,7 @@ const AdminSidebar = ({ isOpen, onToggle }: AdminSidebarProps) => {
       label: 'المدونة',
       children: [
         { label: 'المقالات', path: '/admin/blog/posts' },
+        { label: 'المسودات', path: '/admin/blog/drafts' },
         { label: 'الفئات', path: '/admin/blog/categories' },
         { label: 'المؤرشفة', path: '/admin/blog/archived' },
       ],
