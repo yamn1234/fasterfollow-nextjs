@@ -95,6 +95,12 @@
     content: "\00a0";
   }
 
+  /* Preserve newlines and spacing in blog posts */
+  .prose p {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
   /* Ensure images in rich text are fully responsive */
   .prose img {
     max-width: 100%;
