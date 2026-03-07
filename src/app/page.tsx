@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Index from "@/views/Index";
+import { getHomepageSettings } from "@/lib/getHomepageSettings";
 
 export const metadata = {
   title: "الرئيسية | فاستر فولو - اسرع موقع رشق متابعين",
@@ -14,10 +15,12 @@ export const metadata = {
   },
 };
 
-export default function Page() {
+export default async function Page() {
+  const initialSettings = await getHomepageSettings();
+
   return (
     <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>}>
-      <Index />
+      <Index initialSettings={initialSettings} />
     </Suspense>
   );
 }

@@ -16,7 +16,11 @@ import { Loader2 } from "lucide-react";
 import SEOHead from "@/components/SEOHead";
 import JsonLd, { getOrganizationSchema, getWebSiteSchema } from "@/components/JsonLd";
 
-const Index = () => {
+interface IndexProps {
+  initialSettings?: any;
+}
+
+const Index = ({ initialSettings }: IndexProps) => {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
 
@@ -34,9 +38,9 @@ const Index = () => {
     featuresSettings,
     ctaSettings,
     loading
-  } = useHomepageSettings();
+  } = useHomepageSettings(initialSettings);
 
-  if (loading) {
+  if (loading && !initialSettings) {
     return (
       <div className="min-h-screen flex flex-col">
         <Header />

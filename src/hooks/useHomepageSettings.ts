@@ -150,17 +150,26 @@ const defaultCTASettings: CTASettings = {
 const CACHE_KEY = 'ff_homepage_settings';
 const CACHE_TTL = 3600000; // 1 hour
 
-export const useHomepageSettings = () => {
-  const [sections, setSections] = useState<HomepageSection[]>(defaultSections);
-  const [heroSettings, setHeroSettings] = useState<HeroSettings>(defaultHeroSettings);
-  const [siteSettings, setSiteSettings] = useState<SiteSettings>(defaultSiteSettings);
-  const [servicesSettings, setServicesSettings] = useState<ServicesSettings>(defaultServicesSettings);
-  const [platformsSettings, setPlatformsSettings] = useState<PlatformsSettings>(defaultPlatformsSettings);
-  const [featuresSettings, setFeaturesSettings] = useState<FeaturesSettings>(defaultFeaturesSettings);
-  const [ctaSettings, setCtaSettings] = useState<CTASettings>(defaultCTASettings);
-  const [loading, setLoading] = useState(true);
+export const useHomepageSettings = (initialData?: {
+  sections: HomepageSection[];
+  heroSettings: HeroSettings;
+  siteSettings: SiteSettings;
+  servicesSettings: ServicesSettings;
+  platformsSettings: PlatformsSettings;
+  featuresSettings: FeaturesSettings;
+  ctaSettings: CTASettings;
+}) => {
+  const [sections, setSections] = useState<HomepageSection[]>(initialData?.sections || defaultSections);
+  const [heroSettings, setHeroSettings] = useState<HeroSettings>(initialData?.heroSettings || defaultHeroSettings);
+  const [siteSettings, setSiteSettings] = useState<SiteSettings>(initialData?.siteSettings || defaultSiteSettings);
+  const [servicesSettings, setServicesSettings] = useState<ServicesSettings>(initialData?.servicesSettings || defaultServicesSettings);
+  const [platformsSettings, setPlatformsSettings] = useState<PlatformsSettings>(initialData?.platformsSettings || defaultPlatformsSettings);
+  const [featuresSettings, setFeaturesSettings] = useState<FeaturesSettings>(initialData?.featuresSettings || defaultFeaturesSettings);
+  const [ctaSettings, setCtaSettings] = useState<CTASettings>(initialData?.ctaSettings || defaultCTASettings);
+  const [loading, setLoading] = useState(!initialData);
 
   useEffect(() => {
+    if (initialData) return; // Skip client fetch if we already have SSR data
     // Try to load from cache
     const cachedData = localStorage.getItem(CACHE_KEY);
     if (cachedData) {
